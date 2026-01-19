@@ -105,13 +105,24 @@ func (ct *CategoryTvShowImpl) DoCategory(mediaFile *models.ScrapeMediaFile) (str
 		}
 		helpers.AppLogger.Infof("有 %d 个没有流派要求的分类命中", len(fCA))
 		helpers.AppLogger.Infof("有 %d 个有流派要求的分类命中", len(fC))
-		helpers.AppLogger.Infof("有 %d 个没有语言要求的分类命中", len(fLA))
-		helpers.AppLogger.Infof("有 %d 个有语言要求的分类命中", len(fL))
+		helpers.AppLogger.Infof("有 %d 个没有国家要求的分类命中", len(fLA))
+		helpers.AppLogger.Infof("有 %d 个有国家要求的分类命中", len(fL))
 		if len(fC) > 0 && len(fL) > 0 {
 			for _, tempC := range fC {
 				if slices.Contains(fL, tempC) {
 					c = tempC
-					helpers.AppLogger.Infof("取流派ID和语言均命中的分类 %d=>%s", c.ID, c.Name)
+					helpers.AppLogger.Infof("取流派ID和国家均命中的分类 %d=>%s", c.ID, c.Name)
+					break
+				}
+			}
+		}
+		// 如果有精确的国家命中，没有精确的流派命中
+		if len(fL) > 0 && len(fC) == 0 {
+			for _, tempL := range fL {
+				if slices.Contains(fL, tempL) {
+					c = tempL
+
+					helpers.AppLogger.Infof("取国家命中的分类 %d=>%s", c.ID, c.Name)
 					break
 				}
 			}
@@ -119,16 +130,6 @@ func (ct *CategoryTvShowImpl) DoCategory(mediaFile *models.ScrapeMediaFile) (str
 			if c == nil {
 				c = fC[0]
 				helpers.AppLogger.Infof("取流派ID命中的分类 %d=>%s", c.ID, c.Name)
-			}
-		}
-		// 如果有精确的语言命中，没有精确的流派命中
-		if len(fL) > 0 && len(fC) == 0 {
-			for _, tempL := range fL {
-				if slices.Contains(fL, tempL) {
-					c = tempL
-					helpers.AppLogger.Infof("取语言命中的分类 %d=>%s", c.ID, c.Name)
-					break
-				}
 			}
 		}
 		// 如果有精确的流派命中，没有精确的语言命中

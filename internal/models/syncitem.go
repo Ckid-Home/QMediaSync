@@ -29,6 +29,7 @@ type StrmData struct {
 	Sign     string `json:"sign"`      // 文件签名
 	Path     string `json:"path"`      // 115的路径
 	BaseUrl  string `json:"base_url"`  // 115的base_url
+	UrlPath  string `json:"url_path"`  // 115的url_path
 }
 
 // 所有的路径, 不包含根目录
@@ -108,7 +109,8 @@ func (sf *SyncFile) GetRemoteFilePathUrlEncode() string {
 func (sf *SyncFile) Make115StrmUrl() string {
 	// 生成URL
 	u, _ := url.Parse(SettingsGlobal.StrmBaseUrl)
-	u.Path = "/115/newurl"
+	ext := filepath.Ext(sf.FileName)
+	u.Path = fmt.Sprintf("/115/url/video%s", ext)
 	params := url.Values{}
 	params.Add("pickcode", sf.PickCode)
 	params.Add("userid", sf.GetAccount().UserId.String())
@@ -252,7 +254,14 @@ func (st *SyncFile) CompareStrm() int {
 			st.Sync.Logger.Warnf("文件 %s 的STRM内容的用户ID与本地不一致, 本地: %s, 远程: %s", filepath.Join(st.Path, st.FileName), account.UserId.String(), strmData.UserId)
 			return 0
 		}
+		// 比较UrlPath，如果是iso文件，UrlPath必须以.iso结尾
+		ext := filepath.Ext(st.FileName)
+		if !strings.HasSuffix(strmData.UrlPath, ext) {
+			st.Sync.Logger.Warnf("文件 %s 的STRM内容的Url路径 %s 没有以 %s 结尾，重新生成", st.FileName, strmData.UrlPath, ext)
+			return 0
+		}
 	}
+
 	// 比较文件修改时间
 	// if st.MTime > 0 {
 	// 	// 读取文件修改时间
@@ -288,6 +297,7 @@ func (st *SyncFile) LoadDataFromStrm() *StrmData {
 		st.Sync.Logger.Errorf("解析strm文件失败: %v", urlErr)
 		return nil
 	}
+	strmData.UrlPath = strmUrl.Path
 	queryParams := strmUrl.Query()
 	if pickCode := queryParams.Get("pickcode"); pickCode != "" {
 		strmData.PickCode = pickCode

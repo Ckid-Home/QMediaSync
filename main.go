@@ -303,9 +303,10 @@ func setRouter(r *gin.Engine) {
 	})
 	r.POST("/emby/webhook", controllers.Webhook)
 	r.POST("/api/login", controllers.LoginAction)
-	r.GET("/115/url", controllers.Get115FileUrl)           // 查询115直链
-	r.GET("/115/newurl", controllers.Get115UrlByPickCode)  // 查询115直链 by fileId
-	r.GET("/openlist/url", controllers.GetOpenListFileUrl) // 查询OpenList直链
+	r.GET("/115/url/*filename", controllers.Get115UrlByPickCode) // 查询115直链 by pickcode 支持iso，路径最后一部分是.扩展名格式
+	r.GET("/115/url", controllers.Get115FileUrl)                 // 查询115直链
+	r.GET("/115/newurl", controllers.Get115UrlByPickCode)        // 查询115直链 by pickcode
+	r.GET("/openlist/url", controllers.GetOpenListFileUrl)       // 查询OpenList直链
 
 	r.GET("/proxy-115", controllers.Proxy115)                            // 115CDN反代路由
 	r.GET("/api/scrape/tmp-image", controllers.ScrapeTmpImage)           // 获取临时图片
