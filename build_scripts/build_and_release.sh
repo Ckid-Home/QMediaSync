@@ -321,8 +321,8 @@ if gh release create "$TAG" \
     
     # Send Telegram notification after successful release
     print_colored "cyan" "Sending release notes to Telegram..."
-    TELEGRAM_BOT_TOKEN="8443342516:AAGC0pwtZfgyTR8dQtNTQ2uTWqCoZKzE0AI"
-    TELEGRAM_CHAT_ID="-1003892669499"
+    TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
+    TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
     
     # Escape special characters for JSON
     TELEGRAM_MESSAGE=$(echo "$RELEASE_BODY" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
@@ -341,21 +341,15 @@ if gh release create "$TAG" \
         
         # Send MeoW notification after successful Telegram message
         print_colored "cyan" "Sending release notes to MeoW..."
-        MEOW_API_URL="https://www.chuckfang.com/MeoW/Broadcast.html"
-        MEOW_CHANNEL_ID="cb7fc49997b44242bbb43590128a6eb8"
-        MEOW_UNION_ID="MDGpNMFFfEib0jtgpTY63wRktiaOHmvr0N3d7JaZLibEwgMIg"
+        MEOW_API_URL="${MEOW_API_URL:-}"
         
         # Escape special characters for JSON
         MEOW_MESSAGE=$(echo "$RELEASE_BODY" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
         
         # Send message to MeoW
         MEOW_RESPONSE=$(curl -s -X POST "$MEOW_API_URL" \
-            -H "Content-Type: application/json" \
-            -d "{
-                \"channelId\": \"${MEOW_CHANNEL_ID}\",
-                \"unionId\": \"${MEOW_UNION_ID}\",
-                \"message\": \"${MEOW_MESSAGE}\"
-            }")
+            -H "Content-Type:  text/plain" \
+            -d "${MEOW_MESSAGE}")
         
         if echo "$MEOW_RESPONSE" | grep -q '"success":true'; then
             print_colored "green" "✓ Release notes sent to MeoW successfully"
