@@ -43,7 +43,7 @@ sudo ./build_and_release.sh -v vx.xx.xx
 
 编译要求具有github命令行gh权限，且已经登录
 如果要发布docker镜像，需要提前登录docker hub
-该命令会编译打包所有平台的二进制文件，生成release版本，并且发布到github release页面，推送到docker hub
+该命令会编译打包所有平台的二进制文件，生成release版本，并且发布到github release页面，推送到docker hub（如果要推送到自己的仓库，请修改编译脚本中的用户名和仓库名）
 
 ## 数据库
 
@@ -56,7 +56,7 @@ sudo ./build_and_release.sh -v vx.xx.xx
 - OpenAI兼容的 API KEY，目前用的硅基流动，可在web页面设置
 - Fanart.tv API KEY
 
-项目中搜索// TODO 开源版本留空 可以找到相关位置
+全部都在main.go文件中开头的变量中设置，也可以在编译时通过ldflags传入
 
 ## 配套前端
 
