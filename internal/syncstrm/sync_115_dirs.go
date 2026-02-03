@@ -40,9 +40,10 @@ func (s *SyncStrm) Start115PathDispathcer() error {
 	// 将路径ID加入任务队列
 	s.Sync.Logger.Infof("开始路径补全任务，共有 %d 个需要补全路径的目录", len(parentIds))
 	for pathId := range parentIds {
-		s.Sync.Logger.Infof("加入目录ID %s 到路径补全队列", pathId)
+		currentPathId := pathId // 捕获循环变量
+		s.Sync.Logger.Infof("加入目录ID %s 到路径补全队列", currentPathId)
 		eg.Go(func() error {
-			return s.process115Path(ctx, pathId)
+			return s.process115Path(ctx, currentPathId)
 		})
 	}
 	if err := eg.Wait(); err != nil {

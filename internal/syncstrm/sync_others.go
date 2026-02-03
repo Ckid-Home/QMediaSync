@@ -4,6 +4,8 @@ import (
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/v115open"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -13,7 +15,66 @@ func (s *SyncStrm) StartOther() {
 	s.Sync.UpdateSubStatus(models.SyncSubStatusProcessNetFileList)
 
 	eg, ctx := errgroup.WithContext(s.Context)
-	eg.SetLimit(int(s.PathWorkerMax) + 3) // 增加一些额外的协程数，避免死锁
+	workerCount := int(s.PathWorkerMax) + 3
+	if workerCount < 1 {
+		workerCount = 1
+	}
+	// 使用无界队列，避免 worker 内部入队阻塞导致死锁
+	type pathQueue struct {
+		mu     sync.Mutex
+		cond   *sync.Cond
+		items  []pathQueueItem
+		closed bool
+	}
+	q := &pathQueue{}
+	q.cond = sync.NewCond(&q.mu)
+	var closeOnce sync.Once
+	closeQueue := func() {
+		closeOnce.Do(func() {
+			q.mu.Lock()
+			q.closed = true
+			q.mu.Unlock()
+			q.cond.Broadcast()
+		})
+	}
+	var pending int64
+	// 入队：失败时回滚计数
+	enqueue := func(item pathQueueItem) bool {
+		if ctx.Err() != nil {
+			return false
+		}
+		atomic.AddInt64(&pending, 1)
+		q.mu.Lock()
+		if q.closed {
+			q.mu.Unlock()
+			if atomic.AddInt64(&pending, -1) == 0 {
+				closeQueue()
+			}
+			return false
+		}
+		q.items = append(q.items, item)
+		q.mu.Unlock()
+		q.cond.Signal()
+		return true
+	}
+	dequeue := func() (pathQueueItem, bool) {
+		q.mu.Lock()
+		for len(q.items) == 0 && !q.closed {
+			q.cond.Wait()
+		}
+		if len(q.items) == 0 && q.closed {
+			q.mu.Unlock()
+			return pathQueueItem{}, false
+		}
+		item := q.items[0]
+		q.items = q.items[1:]
+		q.mu.Unlock()
+		return item, true
+	}
+	go func() {
+		<-ctx.Done()
+		closeQueue()
+	}()
 
 	var processPath func(pathQueueItem) error
 	processPath = func(pathItem pathQueueItem) error {
@@ -28,17 +89,22 @@ func (s *SyncStrm) StartOther() {
 			s.Sync.Logger.Warnf("目录 %s 被排除，跳过它和旗下所有内容", pathItem.Path)
 			return nil
 		}
-
+		// s.Sync.Logger.Debugf("准备请求API接口获取目录下的文件列表, 目录：%s", pathItem.Path)
 		// GetNetFileFiles 返回该目录下的子目录和文件列表
 		fileItems, err := s.SyncDriver.GetNetFileFiles(ctx, pathItem.Path, pathItem.PathId)
 		if err != nil {
-			s.PathErrChan <- err
+			s.Sync.Logger.Errorf("请求完成，获取目录 %s 下的文件列表失败: %v", pathItem.Path, err)
+			select {
+			case s.PathErrChan <- err:
+			default:
+			}
 			return err
 		}
 		if len(fileItems) == 0 {
-			s.Sync.Logger.Infof("目录 %s 下没有文件，跳过", pathItem.Path)
+			s.Sync.Logger.Infof("请求完成，目录 %s 下没有文件，跳过", pathItem.Path)
 			return nil
 		}
+		s.Sync.Logger.Infof("请求完成，目录 %s 下共有 %d 个文件和子目录", pathItem.Path, len(fileItems))
 		// 递归处理子目录
 		for _, fileItem := range fileItems {
 			if s.IsExcludeName(filepath.Base(fileItem.FileName)) {
@@ -54,11 +120,8 @@ func (s *SyncStrm) StartOther() {
 					Path:   fileItem.GetFullRemotePath(),
 					PathId: fileItem.GetFileId(),
 				}
-				eg.Go(func(item pathQueueItem) func() error {
-					return func() error {
-						return processPath(item)
-					}
-				}(subPath))
+				s.Sync.Logger.Debugf("目录 %s 下发现子目录 %s，准备放入路径队列继续处理", pathItem.Path, subPath.Path)
+				enqueue(subPath)
 			} else {
 				// 处理文件
 				if !s.ValidFile(fileItem) {
@@ -77,11 +140,35 @@ func (s *SyncStrm) StartOther() {
 		return nil
 	}
 
-	eg.Go(func() error {
-		return processPath(pathQueueItem{
-			Path:   s.SourcePath,
-			PathId: s.SourcePathId,
+	for i := 0; i < workerCount; i++ {
+		eg.Go(func() error {
+			for {
+				item, ok := dequeue()
+				if !ok {
+					return nil
+				}
+				if ctx.Err() != nil {
+					if atomic.AddInt64(&pending, -1) == 0 {
+						closeQueue()
+					}
+					return nil
+				}
+				if err := processPath(item); err != nil {
+					if atomic.AddInt64(&pending, -1) == 0 {
+						closeQueue()
+					}
+					return err
+				}
+				if atomic.AddInt64(&pending, -1) == 0 {
+					closeQueue()
+				}
+			}
 		})
+	}
+
+	enqueue(pathQueueItem{
+		Path:   s.SourcePath,
+		PathId: s.SourcePathId,
 	})
 
 	if err := eg.Wait(); err != nil {

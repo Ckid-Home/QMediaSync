@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -28,8 +30,65 @@ func (s *SyncStrm) Preload115Dirs(firstFileId string) error {
 
 	// 使用 errgroup 管理并发生命周期
 	eg, ctx := errgroup.WithContext(s.Context)
-	// SetLimit 自动限制并发数（替代 Worker Pool）
-	eg.SetLimit(int(s.PathWorkerMax) + 2) // 增加2个协程，避免死锁，115 openapi客户端会限制并发
+	workerCount := int(s.PathWorkerMax) + 2
+	if workerCount < 1 {
+		workerCount = 1
+	}
+	// 使用无界队列，避免 TryGo 丢任务或递归阻塞
+	type pathQueue struct {
+		mu     sync.Mutex
+		cond   *sync.Cond
+		items  []*pathQueueItem
+		closed bool
+	}
+	q := &pathQueue{}
+	q.cond = sync.NewCond(&q.mu)
+	var closeOnce sync.Once
+	closeQueue := func() {
+		closeOnce.Do(func() {
+			q.mu.Lock()
+			q.closed = true
+			q.mu.Unlock()
+			q.cond.Broadcast()
+		})
+	}
+	var pending int64
+	enqueue := func(item *pathQueueItem) bool {
+		if ctx.Err() != nil {
+			return false
+		}
+		atomic.AddInt64(&pending, 1)
+		q.mu.Lock()
+		if q.closed {
+			q.mu.Unlock()
+			if atomic.AddInt64(&pending, -1) == 0 {
+				closeQueue()
+			}
+			return false
+		}
+		q.items = append(q.items, item)
+		q.mu.Unlock()
+		q.cond.Signal()
+		return true
+	}
+	dequeue := func() (*pathQueueItem, bool) {
+		q.mu.Lock()
+		for len(q.items) == 0 && !q.closed {
+			q.cond.Wait()
+		}
+		if len(q.items) == 0 && q.closed {
+			q.mu.Unlock()
+			return nil, false
+		}
+		item := q.items[0]
+		q.items = q.items[1:]
+		q.mu.Unlock()
+		return item, true
+	}
+	go func() {
+		<-ctx.Done()
+		closeQueue()
+	}()
 
 	// 递归函数，优雅地处理树状目录结构
 	var processPath func(*pathQueueItem) error
@@ -87,24 +146,45 @@ func (s *SyncStrm) Preload115Dirs(firstFileId string) error {
 					PathId: pathItem.PathId,
 					Depth:  item.Depth + 1,
 				}
-				// 每个子目录启动一个 goroutine，SetLimit 自动控制并发
 				s.Sync.Logger.Infof("预取115目录，递归处理子目录: %s", subItem.Path)
-				eg.Go(func() error {
-					return processPath(subItem)
-				})
+				enqueue(subItem)
 			}
 		}
 
 		return nil
 	}
 
-	// 启动根目录处理
-	eg.Go(func() error {
-		return processPath(&pathQueueItem{
-			Path:   s.SourcePath,
-			PathId: s.SourcePathId,
-			Depth:  0,
+	for i := 0; i < workerCount; i++ {
+		eg.Go(func() error {
+			for {
+				item, ok := dequeue()
+				if !ok {
+					return nil
+				}
+				if ctx.Err() != nil {
+					if atomic.AddInt64(&pending, -1) == 0 {
+						closeQueue()
+					}
+					return nil
+				}
+				if err := processPath(item); err != nil {
+					if atomic.AddInt64(&pending, -1) == 0 {
+						closeQueue()
+					}
+					return err
+				}
+				if atomic.AddInt64(&pending, -1) == 0 {
+					closeQueue()
+				}
+			}
 		})
+	}
+
+	// 启动根目录处理
+	enqueue(&pathQueueItem{
+		Path:   s.SourcePath,
+		PathId: s.SourcePathId,
+		Depth:  0,
 	})
 
 	// 统一等待所有任务并处理错误

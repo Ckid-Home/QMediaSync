@@ -18,6 +18,10 @@ func (s *SyncStrm) Start115FileDispathcer(total int64) error {
 	if total%int64(limit) != 0 {
 		pageCount++
 	}
+	if pageCount == 0 {
+		s.Sync.Logger.Infof("无需处理文件列表，总数为 0")
+		return nil
+	}
 	// 取pageCount和s.PathWorkerMax之间的较小值
 	workerMax := min(pageCount, s.PathWorkerMax)
 

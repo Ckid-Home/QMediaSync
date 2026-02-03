@@ -410,11 +410,16 @@ func (s *SyncStrm) compareLocalFilesWithTempTable() error {
 					s.Sync.Logger.Infof("本地元数据文件 %s 由于关闭了元数据下载所以不需要处理", info.Name())
 					return nil
 				}
+				if !isVideo && !isMeta {
+					// 非视频文件和元数据文件，跳过
+					s.Sync.Logger.Debugf("本地文件 %s 既不是STRM文件也不是元数据文件，跳过", path)
+					return nil
+				}
 				// 检查文件在临时表是否存在
 				// existsFile, _ := s.queryTempTableByLocalPath(path)
 				existsFile, err := s.memSyncCache.GetByLocalPath(path)
 				if err != nil {
-					s.Sync.Logger.Errorf("查询同步缓存失败 %s: %v", path, err)
+					s.Sync.Logger.Warnf("查询同步缓存失败 %s: %v", path, err)
 				}
 				// s.Sync.Logger.Infof("对比本地文件 %s，是否存在于网盘: %v", path, existsFile)
 				if isVideo {
