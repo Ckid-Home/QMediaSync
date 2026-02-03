@@ -18,6 +18,7 @@ RUN echo $PUBLISH_DATE
 # 构建应用
 RUN CGO_ENABLED=0 go build -ldflags="-s -w -X 'main.Version=${APP_VERSION}' -X 'main.PublishDate=${PUBLISH_DATE}' -X main.FANART_API_KEY=${FANART_API_KEY} -X main.DEFAULT_TMDB_ACCESS_TOKEN=${DEFAULT_TMDB_ACCESS_TOKEN} -X main.DEFAULT_TMDB_API_KEY=${DEFAULT_TMDB_API_KEY} -X main.DEFAULT_SC_API_KEY=${DEFAULT_SC_API_KEY} -X main.ENCRYPTION_KEY=${ENCRYPTION_KEY}" -o QMediaSync .
 
+
 # 运行阶段
 FROM qicfan/qms-build-base:latest
 # 设置时区
