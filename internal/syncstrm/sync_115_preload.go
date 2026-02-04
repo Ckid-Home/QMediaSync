@@ -130,7 +130,6 @@ func (s *SyncStrm) Preload115Dirs(firstFileId string) error {
 				MTime:      pathItem.Mtime,
 				IsVideo:    false,
 				IsMeta:     false,
-				Processed:  true,
 			}
 			fileItem.GetLocalFilePath(s.TargetPath, s.SourcePath) // 生成本地路径缓存
 			s.memSyncCache.Insert(fileItem)

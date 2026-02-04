@@ -149,7 +149,6 @@ func (d *SyncFileCache) GetSyncFile(s *SyncStrm, openlistBaseUrl string) *models
 		Sha1:          d.Sha1,
 		IsVideo:       d.IsVideo,
 		IsMeta:        d.IsMeta,
-		Processed:     d.Processed,
 		LocalFilePath: d.GetLocalFilePath(s.TargetPath, s.SourcePath),
 	}
 	return syncFile

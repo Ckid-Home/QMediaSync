@@ -169,10 +169,6 @@ func (s *SyncStrm) handelTempFileByPathId(pathId string) error {
 		return nil
 	}
 	for _, file := range files {
-		if file.Processed {
-			s.Sync.Logger.Infof("文件ID %s %s 路径 %s 已处理，跳过", file.FileId, file.FileName, file.Path)
-			continue
-		}
 		// 更新文件路径
 		file.GetLocalFilePath(s.TargetPath, s.SourcePath)
 		s.Sync.Logger.Infof("文件ID %s 路径 %s 本地路径 %s 路径已补全，开始处理文件", file.FileId, file.Path, file.LocalFilePath)
