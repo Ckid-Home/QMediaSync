@@ -578,8 +578,8 @@ func (s *SyncStrm) handleTempTableDiff() error {
 		}
 		offset += limit
 	}
-	s.Sync.Logger.Infof("SyncFile表中共有 %d 条多余数据需要删除，开始分批删除，每批1000条", len(waitDeleteIds))
 	if len(waitDeleteIds) > 0 {
+		s.Sync.Logger.Infof("SyncFile表中共有 %d 条多余数据需要删除，开始分批删除，每批1000条", len(waitDeleteIds))
 		// 分批删除
 		batchSize := 1000
 		if len(waitDeleteIds) <= batchSize {
@@ -628,7 +628,7 @@ func (s *SyncStrm) handleTempTableDiff() error {
 				s.Sync.Logger.Errorf("插入SyncFile表数据失败 FileID=%s: %v", file.GetFileId(), err)
 				continue
 			}
-			s.Sync.Logger.Infof("插入SyncFile表数据成功 FileID=%s", file.FileId)
+			s.Sync.Logger.Infof("插入SyncFile表数据成功 FileID=%s", file.GetFileId())
 			// 插入成功后，从同步缓存中移除该记录
 			s.memSyncCache.DeleteByFileId(file.FileId)
 		}
