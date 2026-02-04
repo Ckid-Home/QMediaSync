@@ -153,6 +153,10 @@ func (qe *QueueExecutor) Start() {
 		return
 	}
 	qe.running = true
+	// 检查queueRequest通道是否已关闭，若已关闭则重新创建
+	if qe.requestQueue == nil {
+		qe.requestQueue = make(chan *QueuedRequest, 100)
+	}
 	qe.Unlock()
 
 	helpers.V115Log.Infof("启动115 OpenAPI队列执行器，Worker数量: %d, QPS: %d, QPM: %d, QPH: %d",
@@ -188,6 +192,7 @@ func (qe *QueueExecutor) Stop() {
 
 	// 关闭队列通道
 	close(qe.requestQueue)
+	qe.requestQueue = nil
 }
 
 // worker Worker协程，处理队列中的请求

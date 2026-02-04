@@ -384,7 +384,7 @@ func InitOthers() {
 	helpers.AppLogger.Infof("已加载配置，准备初始化115请求队列，线程数: %d", models.SettingsGlobal.FileDetailThreads)
 	qps := models.SettingsGlobal.FileDetailThreads
 	if qps <= 0 {
-		qps = 3
+		qps = 2
 	}
 	v115open.SetGlobalExecutorConfig(qps, qps*60, qps*3600)
 	models.LoadScrapeSettings()      // 从数据库加载刮削设置
