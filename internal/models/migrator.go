@@ -313,7 +313,7 @@ func Migrate() {
 		updateData := make(map[string]interface{})
 		// 将下载QPS默认改为1，防止限流
 		updateData["download_threads"] = 1
-		updateData["openlist_qps"] = 1
+		updateData["openlist_qps"] = 2
 		updateData["openlist_retry"] = 1
 		updateData["openlist_retry_delay"] = 60
 		err := db.Db.Model(Settings{}).Where("id >= ?", 1).Updates(updateData).Error
