@@ -77,7 +77,6 @@ mainloop:
 				if file.FileCategory == v115open.TypeDir {
 					fileItem.IsVideo = false
 					fileItem.IsMeta = false
-					fileItem.Processed = true
 				}
 
 				fileItems = append(fileItems, &fileItem)
@@ -136,7 +135,6 @@ func (d *open115Driver) CreateDirRecursively(ctx context.Context, path string) (
 			FileType:   v115open.TypeDir,
 			IsVideo:    false,
 			IsMeta:     false,
-			Processed:  true,
 			SourceType: models.SourceType115,
 		}
 		syncFileCache.GetLocalFilePath(d.s.TargetPath, d.s.SourcePath)

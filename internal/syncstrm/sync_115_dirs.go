@@ -17,25 +17,19 @@ func (s *SyncStrm) Start115PathDispathcer() error {
 	// 使用 errgroup 管理并发
 	eg, ctx := errgroup.WithContext(s.Context)
 	eg.SetLimit(int(s.PathWorkerMax))
-	offset := 0
-	limit := 1000
 	// 先找到所有路径为空的目录ID，去重
 	parentIds := make(map[string]bool)
-	for {
-		fileItems, err := s.memSyncCache.Query(offset, limit)
-		if err != nil || len(fileItems) == 0 {
-			break
+	c := s.memSyncCache.Count()
+	if c == 0 {
+		s.Sync.Logger.Infof("同步缓存中没有文件记录需要处理")
+		return nil
+	}
+	fileItems := s.memSyncCache.GetAllFile()
+	for _, item := range fileItems {
+		if item.FileType == v115open.TypeDir || item.Path != "" {
+			continue
 		}
-		for _, item := range fileItems {
-			if item.FileType == v115open.TypeDir || item.Path != "" {
-				continue
-			}
-			parentIds[item.ParentId] = true
-		}
-		if len(fileItems) < limit {
-			break
-		}
-		offset += limit
+		parentIds[item.ParentId] = true
 	}
 	// 将路径ID加入任务队列
 	s.Sync.Logger.Infof("开始路径补全任务，共有 %d 个需要补全路径的目录", len(parentIds))
@@ -161,29 +155,23 @@ pathloop:
 	return nil
 }
 
+// 更新路径下的所有文件并处理他们
 func (s *SyncStrm) handelTempFileByPathId(pathId string) error {
 	// 加锁
-	s.memSyncCache.mu.RLock()
-	fileIds := s.memSyncCache.parentIndex[pathId]
-	s.memSyncCache.mu.RUnlock()
-	s.Sync.Logger.Infof("开始处理路径ID %s 下的所有文件，共 %d 个", pathId, len(fileIds))
-	if len(fileIds) == 0 {
+	files, err := s.memSyncCache.GetByParentId(pathId)
+	if err != nil {
+		s.Sync.Logger.Errorf("查询临时表文件失败: parent_id=%s, %v", pathId, err.Error)
+		return err
+	}
+	s.Sync.Logger.Infof("开始处理路径ID %s 下的所有文件，共 %d 个", pathId, len(files))
+	if len(files) == 0 {
 		// 如果没有更多文件，退出
 		return nil
 	}
-	for _, fileId := range fileIds {
-		file, err := s.memSyncCache.GetByFileId(fileId)
-		if err != nil {
-			s.Sync.Logger.Errorf("查询临时表文件失败: parent_id=%s, %v", pathId, err.Error)
-			return err
-		}
-		if file.Processed {
-			s.Sync.Logger.Infof("文件ID %s %s 路径 %s 已处理，跳过", file.FileId, file.FileName, file.Path)
-			continue
-		}
+	for _, file := range files {
 		// 更新文件路径
 		file.GetLocalFilePath(s.TargetPath, s.SourcePath)
-		s.Sync.Logger.Infof("文件ID %s 路径 %s 本地路径 %s 路径已补全，开始处理文件", file.FileId, file.Path, file.LocalFilePath)
+		// s.Sync.Logger.Infof("文件ID %s 路径 %s 本地路径 %s 路径已补全，开始处理文件", file.FileId, file.Path, file.LocalFilePath)
 		// 开始处理文件
 		s.processNetFile(file)
 	}

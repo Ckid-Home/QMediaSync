@@ -114,7 +114,6 @@ func (s *SyncStrm) GetExistsPath() int64 {
 				MTime:      path.MTime,
 				IsVideo:    false,
 				IsMeta:     false,
-				Processed:  true,
 			}
 			s.memSyncCache.Insert(fileItem)
 			fileItem.GetLocalFilePath(s.TargetPath, s.SourcePath) // 生成本地路径缓存

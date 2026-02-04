@@ -3,7 +3,5 @@
 
 package helpers
 
-var WindowsExitChan = make(chan struct{})
-
 func StartApp(stopFunc func()) {
 }

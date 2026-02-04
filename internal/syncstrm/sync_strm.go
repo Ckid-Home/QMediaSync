@@ -26,7 +26,7 @@ type StrmData struct {
 func (s *SyncStrm) ProcessStrmFile(sf *SyncFileCache) error {
 	rs := s.CompareStrm(sf)
 	if rs == 1 {
-		s.Sync.Logger.Infof("文件 %s 已存在且无需更新strm文件，跳过", filepath.Join(sf.Path, sf.FileName))
+		// s.Sync.Logger.Infof("文件 %s 已存在且无需更新strm文件，跳过", filepath.Join(sf.Path, sf.FileName))
 		return nil
 	}
 	// localFilePath := sf.GetLocalFilePath()

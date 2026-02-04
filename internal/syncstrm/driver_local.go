@@ -61,7 +61,6 @@ func (d *localDriver) GetNetFileFiles(ctx context.Context, parentPath, parentPat
 				fileItem.FileType = v115open.TypeDir
 				fileItem.IsVideo = false
 				fileItem.IsMeta = false
-				fileItem.Processed = true
 			}
 			fileItems = append(fileItems, &fileItem)
 		}
@@ -85,7 +84,6 @@ func (d *localDriver) CreateDirRecursively(ctx context.Context, path string) (pa
 		FileType:   v115open.TypeDir,
 		IsVideo:    false,
 		IsMeta:     false,
-		Processed:  true,
 		SourceType: models.SourceTypeLocal,
 	}
 	syncFileCache.GetLocalFilePath(d.s.TargetPath, d.s.SourcePath)
