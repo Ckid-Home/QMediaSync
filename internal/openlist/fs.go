@@ -186,7 +186,7 @@ func (c *Client) Upload(localFile string, remotePath string) (*UploadResult, err
 	req.SetFile("file", localFile)
 	// 对远程路径进行URL编码
 	encodedPath := helpers.UrlEncode(remotePath)
-	req.Header.Add("path", encodedPath)
+	req.Header.Add("File-Path", encodedPath)
 	req.Header.Add("As-Task", "true")
 	req.Header.Add("overwrite", "false")
 	req.Header.Add("Content-Type", "multipart/form-data")

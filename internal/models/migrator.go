@@ -28,7 +28,7 @@ func (*Migrator) TableName() string {
 func Migrate() {
 	dbFile := filepath.Join(helpers.ConfigDir, helpers.GlobalConfig.Db.File)
 	sqliteDb := db.InitSqlite3(dbFile)
-	maxVersion := 22
+	maxVersion := 23
 	if sqliteDb != nil {
 		// 从sqlite迁移数据到postgres
 		moveSqliteToPostres(sqliteDb, maxVersion)
@@ -320,6 +320,19 @@ func Migrate() {
 		if err != nil {
 			helpers.AppLogger.Errorf("更新Openlist限速设置默认值失败: %v", err)
 		}
+		migrator.UpdateVersionCode(db.Db)
+	}
+	if migrator.VersionCode == 22 {
+		// 给Settings表添加CheckMetaMtime字段
+		db.Db.AutoMigrate(Settings{}, SyncPath{})
+		// 默认修改false
+		updateData := make(map[string]int)
+		updateData["check_meta_mtime"] = -1
+		// 给所有SyncPath设置默认值false
+		db.Db.Model(SyncPath{}).Where("id >= ?", 1).Updates(updateData)
+		// 给所有Settings设置默认值0
+		updateData["check_meta_mtime"] = 0
+		db.Db.Model(Settings{}).Where("id >= ?", 1).Updates(updateData)
 		migrator.UpdateVersionCode(db.Db)
 	}
 	helpers.AppLogger.Infof("当前数据库版本 %d", migrator.VersionCode)

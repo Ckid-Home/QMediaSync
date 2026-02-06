@@ -19,19 +19,20 @@ type Settings struct {
 
 	HttpProxy string `json:"http_proxy"` // HTTP代理地址
 
-	StrmBaseUrl    string   `json:"strm_base_url"`                  // STRM的基础URL，用于生成115的流媒体播放地址
-	Cron           string   `json:"cron"`                           // 定时任务表达式
-	MinVideoSize   int64    `json:"min_video_size"`                 // 最小视频大小，单位字节
-	ExcludeName    string   `json:"-"`                              // 排除的名字，目录或者文件等于这个名字都会排除不处理，JSON格式，一个字符串数组
-	ExcludeNameArr []string `json:"exclude_name_arr" gorm:"-"`      // 排除的名字数组，JSON格式
-	VideoExt       string   `json:"-"`                              // 视频文件扩展名数组，JSON格式
-	VideoExtArr    []string `json:"video_ext_arr" gorm:"-"`         // 视频文件扩展名数组，JSON格式
-	MetaExt        string   `json:"-"`                              // 元数据的扩展名数组，JSON格式
-	MetaExtArr     []string `json:"meta_ext_arr" gorm:"-"`          // 元数据的扩展名数组，JSON格式
-	UploadMeta     int      `json:"upload_meta" gorm:"default:0"`   // 是否上传元数据，0表示保留，1表示上传，2-表示删除
-	DownloadMeta   int      `json:"download_meta" gorm:"default:1"` // 是否下载元数据，0表示不下载，1表示下载
-	DeleteDir      int      `json:"delete_dir" gorm:"default:1"`    // 是否删除目录，0表示不删除，1表示删除
-	AddPath        int      `json:"add_path" gorm:"default:2"`      // 是否添加路径，1- 表示添加路径， 2-表示不添加路径
+	StrmBaseUrl    string   `json:"strm_base_url"`                     // STRM的基础URL，用于生成115的流媒体播放地址
+	Cron           string   `json:"cron"`                              // 定时任务表达式
+	MinVideoSize   int64    `json:"min_video_size"`                    // 最小视频大小，单位字节
+	ExcludeName    string   `json:"-"`                                 // 排除的名字，目录或者文件等于这个名字都会排除不处理，JSON格式，一个字符串数组
+	ExcludeNameArr []string `json:"exclude_name_arr" gorm:"-"`         // 排除的名字数组，JSON格式
+	VideoExt       string   `json:"-"`                                 // 视频文件扩展名数组，JSON格式
+	VideoExtArr    []string `json:"video_ext_arr" gorm:"-"`            // 视频文件扩展名数组，JSON格式
+	MetaExt        string   `json:"-"`                                 // 元数据的扩展名数组，JSON格式
+	MetaExtArr     []string `json:"meta_ext_arr" gorm:"-"`             // 元数据的扩展名数组，JSON格式
+	UploadMeta     int      `json:"upload_meta" gorm:"default:0"`      // 是否上传元数据，0表示保留，1表示上传，2-表示删除
+	DownloadMeta   int      `json:"download_meta" gorm:"default:1"`    // 是否下载元数据，0表示不下载，1表示下载
+	DeleteDir      int      `json:"delete_dir" gorm:"default:1"`       // 是否删除目录，0表示不删除，1表示删除
+	AddPath        int      `json:"add_path" gorm:"default:2"`         // 是否添加路径，1- 表示添加路径， 2-表示不添加路径
+	CheckMetaMtime int      `json:"check_meta_mtime" gorm:"default:0"` // 是否检查元数据文件修改时间，默认0， 如果1，网盘新则下载，网盘旧就上传（UploadMeta=1时）
 
 	LocalProxy int `json:"local_proxy" gorm:"default:0"` // 是否启用本地代理，0表示不启用，1表示启用
 
@@ -131,7 +132,7 @@ func (settings *Settings) UpdateHttpProxy(httpProxy string) bool {
 // 	return true
 // }
 
-func (settings *Settings) UpdateStrm(strmBaseUrl string, cron string, metaExt []string, videoExt []string, minVideoSize int64, uploadMeta int, deleteDir int, localProxy int, excludeName []string, downloadMeta int, addPath int) bool {
+func (settings *Settings) UpdateStrm(strmBaseUrl string, cron string, metaExt []string, videoExt []string, minVideoSize int64, uploadMeta int, deleteDir int, localProxy int, excludeName []string, downloadMeta int, addPath int, checkMetaMtime int) bool {
 	settings.StrmBaseUrl = strmBaseUrl
 	settings.Cron = cron
 	// 全部转小写
@@ -170,6 +171,7 @@ func (settings *Settings) UpdateStrm(strmBaseUrl string, cron string, metaExt []
 	settings.DeleteDir = deleteDir
 	settings.LocalProxy = localProxy
 	settings.AddPath = addPath
+	settings.CheckMetaMtime = checkMetaMtime
 
 	// 最小视频大小
 	settings.MinVideoSize = minVideoSize
@@ -188,6 +190,7 @@ func (settings *Settings) UpdateStrm(strmBaseUrl string, cron string, metaExt []
 	updateData["exclude_name"] = settings.ExcludeName
 	updateData["download_meta"] = downloadMeta
 	updateData["add_path"] = addPath
+	updateData["check_meta_mtime"] = checkMetaMtime
 	err = db.Db.Model(settings).Where("id = ?", settings.ID).Updates(updateData).Error
 	// _, err = gorm.G[Settings](db.Db).Where("id = ?", settings.ID).Updates(ctx, updateData)
 	if err != nil {

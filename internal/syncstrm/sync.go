@@ -27,6 +27,8 @@ type driverImpl interface {
 	GetFilesByPathId(ctx context.Context, rootPathId string, offset, limit int) ([]v115open.File, error)
 	// 所有文件详情，含路径
 	DetailByFileId(ctx context.Context, fileId string) (*v115open.FileDetail, error)
+	// 删除目录下的某些文件
+	DeleteFile(ctx context.Context, parentId string, fileIds []string) error
 }
 
 type SyncStrm struct {
@@ -150,6 +152,7 @@ func NewSyncStrmFromSyncPath(syncPath *models.SyncPath) *SyncStrm {
 		NetNotFoundFileAction: models.SyncTreeItemMetaAction(syncPath.GetUploadMeta()),
 		StrmUrlNeedPath:       syncPath.GetAddPath(),
 		DelEmptyLocalDir:      syncPath.GetDeleteDir() == 1,
+		CheckMetaMtime:        syncPath.GetCheckMetaMtime(),
 	}
 	return NewSyncStrm(account, syncPath.ID, syncPath.RemotePath, syncPath.BaseCid, syncPath.LocalPath, config, syncPath.IsFullSync)
 }
@@ -511,6 +514,39 @@ func (s *SyncStrm) compareLocalFilesWithTempTable() error {
 						}
 						models.AddUploadTaskFromSyncFile(db115File)
 						return nil
+					}
+					// 网盘存在且设置为上传，需要检查本地是不是比网盘新，如果是的话，需要删除网盘文件并将本地文件上传
+					if existsFile != nil && s.Config.CheckMetaMtime == 1 {
+						localMTime := info.ModTime().Unix()
+						// 网盘比本地新，重新下载
+						// 1. 删除本地文件
+						// 2. 添加下载任务
+						if localMTime < existsFile.MTime {
+							s.Sync.Logger.Infof("本地元数据文件 %s 由于修改时间比网盘旧 %d < %d 所以需要重新下载", path, localMTime, existsFile.MTime)
+							// 1. 删除本地文件
+							s.RemoveFileAndCheckDirEmtry(path)
+
+							// 2. 添加下载任务
+							models.AddDownloadTaskFromSyncFile(existsFile.GetSyncFile(s, s.Account.BaseUrl))
+							return nil
+						}
+
+						if localMTime > existsFile.MTime && s.Config.NetNotFoundFileAction == models.SyncTreeItemMetaActionUpload {
+							// 本地比网盘新，需要删除网盘旧文件并上传新文件
+							s.Sync.Logger.Infof("本地元数据文件 %s 由于修改时间比网盘新 %d > %d 所以需要上传", path, localMTime, existsFile.MTime)
+							// 1. 删除网盘旧文件
+							err := s.SyncDriver.DeleteFile(s.Context, existsFile.ParentId, []string{existsFile.GetFileId()})
+							if err != nil {
+								s.Sync.Logger.Errorf("删除网盘旧文件 %s 失败: %v", existsFile.GetFileId(), err)
+								return nil
+							}
+							// 2. 添加上传任务
+							models.AddUploadTaskFromSyncFile(existsFile.GetSyncFile(s, s.Account.BaseUrl))
+
+							// 3. 删除数据库记录（下次同步时会将新上传的文件插入数据库）
+							s.memSyncCache.DeleteByFileId(existsFile.GetFileId())
+							return nil
+						}
 					}
 				}
 			}

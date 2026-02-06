@@ -241,3 +241,12 @@ func (d *open115Driver) DetailByFileId(ctx context.Context, fileId string) (*v11
 	}
 	return resp, nil
 }
+
+// 删除目录下的某些文件
+func (d *open115Driver) DeleteFile(ctx context.Context, parentId string, fileIds []string) error {
+	_, err := d.client.Del(ctx, fileIds, parentId)
+	if err != nil {
+		return err
+	}
+	return nil
+}

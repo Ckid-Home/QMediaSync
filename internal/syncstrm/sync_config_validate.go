@@ -32,6 +32,7 @@ type SyncStrmConfig struct {
 	ExcludeNames          []string                      `json:"exclude_names"`             // 排除的文件名列表
 	StrmUrlNeedPath       int                           `json:"strm_url_need_path"`        // 视频文件URL是否需要路径，2为不需要，1为需要
 	DelEmptyLocalDir      bool                          `json:"del_empty_local_dir"`       // 是否删除本地空目录
+	CheckMetaMtime        int                           `json:"check_meta_mtime"`          // 是否检查元数据文件修改时间，默认0， 如果1，网盘新则下载，网盘旧就上传（UploadMeta=1时）
 }
 
 func (s *SyncStrm) ValidFile(file *SyncFileCache) bool {

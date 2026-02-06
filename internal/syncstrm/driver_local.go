@@ -118,3 +118,14 @@ func (d *localDriver) GetFilesByPathId(ctx context.Context, rootPathId string, o
 func (d *localDriver) DetailByFileId(ctx context.Context, fileId string) (*v115open.FileDetail, error) {
 	return nil, nil
 }
+
+// 删除目录下的某些文件
+func (d *localDriver) DeleteFile(ctx context.Context, parentId string, fileIds []string) error {
+	for _, fileId := range fileIds {
+		if err := os.Remove(fileId); err != nil {
+			d.s.Sync.Logger.Errorf("删除文件 %s 失败，错误: %v", fileId, err)
+			continue
+		}
+	}
+	return nil
+}

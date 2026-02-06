@@ -348,6 +348,7 @@ func GetStrmConfig(c *gin.Context) {
 	strmConfig["exclude_name"] = models.SettingsGlobal.ExcludeNameArr
 	strmConfig["download_meta"] = models.SettingsGlobal.DownloadMeta
 	strmConfig["add_path"] = models.SettingsGlobal.AddPath
+	strmConfig["check_meta_mtime"] = models.SettingsGlobal.CheckMetaMtime
 	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "获取STRM配置成功", Data: strmConfig})
 }
 
@@ -375,17 +376,18 @@ func GetStrmConfig(c *gin.Context) {
 // @Security ApiKeyAuth
 func UpdateStrmConfig(c *gin.Context) {
 	type updateStrmConfigRequest struct {
-		StrmBaseUrl  string   `form:"strm_base_url" json:"strm_base_url" binding:"required"` // STRM基础URL
-		Cron         string   `form:"cron" json:"cron" binding:"required"`                   // Cron表达式
-		MetaExt      []string `form:"meta_ext" json:"meta_ext" binding:"required"`           // 元数据扩展名，JSON数组字符串格式，例如：["nfo","txt"]
-		VideoExt     []string `form:"video_ext" json:"video_ext" binding:"required"`         // 视频扩展名，JSON数组字符串格式，例如：["mp4","mkv"]
-		MinVideoSize int64    `form:"min_video_size" json:"min_video_size"`                  // 最小视频大小，单位：MB
-		UploadMeta   int      `form:"upload_meta" json:"upload_meta"`                        // 是否上传元数据文件，"1"表示上传，"0"表示不上传
-		DeleteDir    int      `form:"delete_dir" json:"delete_dir"`                          // 是否删除空目录，"1"表示删除，"0"表示不删除
-		LocalProxy   int      `form:"local_proxy" json:"local_proxy"`                        // 是否启用本地代理，"1"表示启用，"0"表示禁用
-		ExcludeName  []string `form:"exclude_name" json:"exclude_name"`                      // 排除的文件名，JSON数组字符串格式，例如：["sample","test"]
-		DownloadMeta int      `form:"download_meta" json:"download_meta"`                    // 是否下载元数据文件，"1"表示下载，"0"表示不下载
-		AddPath      int      `form:"add_path" json:"add_path"`                              // 是否添加路径，1- 表示添加路径， 2-表示不添加路径
+		StrmBaseUrl    string   `form:"strm_base_url" json:"strm_base_url" binding:"required"` // STRM基础URL
+		Cron           string   `form:"cron" json:"cron" binding:"required"`                   // Cron表达式
+		MetaExt        []string `form:"meta_ext" json:"meta_ext" binding:"required"`           // 元数据扩展名，JSON数组字符串格式，例如：["nfo","txt"]
+		VideoExt       []string `form:"video_ext" json:"video_ext" binding:"required"`         // 视频扩展名，JSON数组字符串格式，例如：["mp4","mkv"]
+		MinVideoSize   int64    `form:"min_video_size" json:"min_video_size"`                  // 最小视频大小，单位：MB
+		UploadMeta     int      `form:"upload_meta" json:"upload_meta"`                        // 是否上传元数据文件，"1"表示上传，"0"表示不上传
+		DeleteDir      int      `form:"delete_dir" json:"delete_dir"`                          // 是否删除空目录，"1"表示删除，"0"表示不删除
+		LocalProxy     int      `form:"local_proxy" json:"local_proxy"`                        // 是否启用本地代理，"1"表示启用，"0"表示禁用
+		ExcludeName    []string `form:"exclude_name" json:"exclude_name"`                      // 排除的文件名，JSON数组字符串格式，例如：["sample","test"]
+		DownloadMeta   int      `form:"download_meta" json:"download_meta"`                    // 是否下载元数据文件，"1"表示下载，"0"表示不下载
+		AddPath        int      `form:"add_path" json:"add_path"`                              // 是否添加路径，1- 表示添加路径， 2-表示不添加路径
+		CheckMetaMtime int      `form:"check_meta_mtime" json:"check_meta_mtime"`              // 是否检查元数据修改时间，"1"表示检查，"0"表示不检查
 	}
 	// 获取请求参数
 	var req updateStrmConfigRequest
@@ -405,6 +407,7 @@ func UpdateStrmConfig(c *gin.Context) {
 	localProxy := req.LocalProxy
 	excludeName := req.ExcludeName
 	downloadMeta := req.DownloadMeta
+	checkMetaMtime := req.CheckMetaMtime
 	addPath := req.AddPath
 	// 数据校验
 	if strmBaseUrl == "" {
@@ -426,7 +429,7 @@ func UpdateStrmConfig(c *gin.Context) {
 		return
 	}
 	// 更新设置
-	if !models.SettingsGlobal.UpdateStrm(strmBaseUrl, cron, metaExt, videoExt, minVideoSize, uploadMeta, deleteDir, localProxy, excludeName, downloadMeta, addPath) {
+	if !models.SettingsGlobal.UpdateStrm(strmBaseUrl, cron, metaExt, videoExt, minVideoSize, uploadMeta, deleteDir, localProxy, excludeName, downloadMeta, addPath, checkMetaMtime) {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "更新STRM配置失败", Data: nil})
 		return
 	}

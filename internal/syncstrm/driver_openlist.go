@@ -166,3 +166,17 @@ func (d *openListDriver) GetFilesByPathId(ctx context.Context, rootPathId string
 func (d *openListDriver) DetailByFileId(ctx context.Context, fileId string) (*v115open.FileDetail, error) {
 	return nil, nil
 }
+
+// 删除目录下的某些文件
+func (d *openListDriver) DeleteFile(ctx context.Context, parentId string, fileIds []string) error {
+	names := make([]string, len(fileIds))
+	for i, fileId := range fileIds {
+		names[i] = filepath.Base(fileId)
+	}
+
+	err := d.client.Del(parentId, names)
+	if err != nil {
+		return err
+	}
+	return nil
+}
