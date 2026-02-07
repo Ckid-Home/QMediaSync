@@ -1673,6 +1673,24 @@ func TestExtractMediaInfoRe_TvshowSeasonEpisode(t *testing.T) {
 				Episode: 1,
 			},
 		},
+		{
+			filename: "01 4K.mkv",
+			expectedMediaInfo: &MediaInfo{
+				Name:    "Shiunji-ke no Kodomotachi",
+				Year:    0,
+				Season:  -1,
+				Episode: 1,
+			},
+		},
+		{
+			filename: "01.mkv",
+			expectedMediaInfo: &MediaInfo{
+				Name:    "Shiunji-ke no Kodomotachi",
+				Year:    0,
+				Season:  -1,
+				Episode: 1,
+			},
+		},
 	}
 	i := 0
 	for _, tc := range testCases {

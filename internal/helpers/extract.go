@@ -316,7 +316,9 @@ func ExtractSeasonEpisode(name string) (string, int, int) {
 		`(?i)Vol[\.|\s]+(\d+)`,                 // 卷号
 		`\s?(\d{1,3})$`,                        // 只有集，凡人修仙传 10.mp4或10.mp4
 		`\-\s(\d{1,3})\s`,                      // 只有集，- 10 xxxx.mp4
+		`(\d{2,4})[\s|\.|\_|\-]4[K|k]`,         // 01 4K或01_4K或01-4K或01.4K
 		`\[(\d{1,3})\]`,                        // [01]这种格式
+		`(\d{2,4})`,                            // 10.mkv这种格式
 	}
 	seasonNumber := -1
 	episodeNumber := -1
