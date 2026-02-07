@@ -396,3 +396,12 @@ func (qe *QueueExecutor) GetStats(duration time.Duration) *StatsSnapshot {
 func (qe *QueueExecutor) GetThrottleStatus() ThrottleStatus {
 	return qe.throttleManager.GetThrottleStatus()
 }
+
+// SetThrottledForTesting 手动设置限流状态（仅用于测试）
+func (qe *QueueExecutor) SetThrottledForTesting(throttled bool) {
+	if throttled {
+		qe.throttleManager.MarkThrottled(qe.stats)
+	} else {
+		qe.throttleManager.ClearThrottled()
+	}
+}

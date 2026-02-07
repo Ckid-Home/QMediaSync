@@ -68,11 +68,11 @@ func (tm *ThrottleManager) MarkThrottled(stats *RequestStats) {
 	}
 
 	// 启动恢复计时器
-	go tm.startRecoveryTimer(stats)
+	go tm.startRecoveryTimer()
 }
 
 // startRecoveryTimer 启动恢复计时器
-func (tm *ThrottleManager) startRecoveryTimer(stats *RequestStats) {
+func (tm *ThrottleManager) startRecoveryTimer() {
 	time.Sleep(tm.throttleDuration)
 
 	tm.Lock()
@@ -131,6 +131,13 @@ func (tm *ThrottleManager) GetThrottleStatus() ThrottleStatus {
 	}
 
 	return status
+}
+
+// ClearThrottled 清除限流状态（仅用于测试）
+func (tm *ThrottleManager) ClearThrottled() {
+	tm.Lock()
+	defer tm.Unlock()
+	tm.isThrottled = false
 }
 
 // ThrottleStatus 限流状态详情

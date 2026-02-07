@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	_ "gorm.io/driver/postgres"
@@ -74,10 +73,7 @@ func (m *EmbeddedManager) Stop() error {
 		cmd := exec.Command(pgctlPath, "stop", "-D", m.config.DataDir, "-m", "fast")
 		// --- 新增：隐藏退出时的黑框 ---
 		if runtime.GOOS == "windows" {
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				HideWindow:    true,
-				CreationFlags: 0x08000000,
-			}
+			cmd.SysProcAttr = getSysProcAttr()
 		}
 		cmd.Run()
 

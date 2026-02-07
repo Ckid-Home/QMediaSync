@@ -64,6 +64,7 @@ func (s *SyncStrm) Start115Sync() {
 	filerr := s.Start115FileDispathcer(total)
 	if filerr != nil {
 		s.Sync.Logger.Errorf("启动115文件调度器失败: %v", filerr)
+		s.PathErrChan <- filerr
 		return
 	}
 	// 启动路径调度器

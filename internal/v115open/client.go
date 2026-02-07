@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
@@ -59,37 +58,6 @@ func GetClient(accountId uint, appId string, token string, refreshToken string) 
 func (c *OpenClient) SetAuthToken(token string, refreshToken string) {
 	c.AccessToken = token
 	c.RefreshTokenStr = refreshToken
-}
-
-// request 执行HTTP请求的核心方法
-func (c *OpenClient) request(url string, req *resty.Request) (*resty.Response, *RespBase[json.RawMessage], error) {
-	req.SetResult(&RespBase[json.RawMessage]{}).SetForceResponseContentType("application/json")
-	var response *resty.Response
-	var err error
-	method := req.Method
-	switch method {
-	case "GET":
-		response, err = req.Get(url)
-	case "POST":
-		response, err = req.Post(url)
-	default:
-		return nil, nil, fmt.Errorf("unsupported HTTP method: %s", method)
-	}
-	result := response.Result()
-	resp := result.(*RespBase[json.RawMessage])
-	if err != nil {
-		return response, resp, err
-	}
-	helpers.V115Log.Infof("非认证访问 %s %s\nstate=%d, code=%d, msg=%s, data=%s\n", req.Method, req.URL, resp.State, resp.Code, resp.Message, string(resp.Data))
-	switch resp.Code {
-	case REFRESH_TOKEN_INVALID:
-		return response, nil, fmt.Errorf("token invalid")
-	case REQUEST_MAX_LIMIT_CODE:
-		// 访问频率过高
-		return response, nil, fmt.Errorf("访问频率过高")
-	}
-
-	return response, resp, nil
 }
 
 // doRequest 带重试的请求方法（使用全局队列）
@@ -185,81 +153,6 @@ func (c *OpenClient) doRequest(url string, req *resty.Request, options *RequestC
 	return nil, nil, lastErr
 }
 
-// request 执行HTTP请求的核心方法
-func (c *OpenClient) authRequest(ctx context.Context, url string, req *resty.Request, respData any, options *RequestConfig) (*resty.Response, []byte, error) {
-	helpers.V115Log.Debugf("执行认证请求: %s %s", req.Method, url)
-	req.SetForceResponseContentType("application/json")
-	var response *resty.Response
-	var err error
-	method := req.Method
-	req.SetContext(ctx)
-	req.SetAuthToken(c.AccessToken).SetDoNotParseResponse(true)
-	switch method {
-	case "GET":
-		response, err = req.Get(url)
-	case "POST":
-		response, err = req.Post(url)
-	default:
-		return nil, nil, fmt.Errorf("unsupported HTTP method: %s", method)
-	}
-	helpers.V115Log.Debugf("完成认证请求: %s %s", req.Method, url)
-	if err != nil {
-		return response, nil, err
-	}
-	defer response.Body.Close() // ensure to close response body
-	resBytes, ioErr := io.ReadAll(response.Body)
-	if ioErr != nil {
-		fmt.Println(ioErr)
-		return response, nil, ioErr
-	}
-	resp := &RespBaseBool[json.RawMessage]{}
-
-	bodyErr := json.Unmarshal(resBytes, resp)
-	if bodyErr != nil {
-		// 尝试用RespBase[json.RawMessage]解析
-		respBase := &RespBase[json.RawMessage]{}
-		bodyErr = json.Unmarshal(resBytes, respBase)
-		if bodyErr != nil {
-			helpers.V115Log.Errorf("解析响应失败: %s", bodyErr.Error())
-			return response, resBytes, bodyErr
-		}
-		// 重新赋值状态码、错误码、错误信息、数据
-		resp.Code = respBase.Code
-		resp.Message = respBase.Message
-		resp.Data = respBase.Data
-	}
-	helpers.V115Log.Infof("认证访问 %s %s\nstate=%v, code=%d, msg=%s, data=%s\n", req.Method, req.URL, resp.State, resp.Code, resp.Message, string(resp.Data))
-	switch resp.Code {
-	case ACCESS_TOKEN_AUTH_FAIL:
-		helpers.V115Log.Warn("访问凭证已过期1")
-		return response, nil, fmt.Errorf("token expired")
-	case ACCESS_AUTH_INVALID:
-		helpers.V115Log.Warn("访问凭证已过期2")
-		return response, nil, fmt.Errorf("token expired")
-	case ACCESS_TOKEN_EXPIRY_CODE:
-		helpers.V115Log.Warn("访问凭证已过期3")
-		return response, nil, fmt.Errorf("token expired")
-	case REFRESH_TOKEN_INVALID:
-		// 不需要重试，直接返回
-		helpers.V115Log.Error("访问凭证无效，请重新登录")
-		return response, nil, fmt.Errorf("token expired")
-	case REQUEST_MAX_LIMIT_CODE:
-		return response, nil, fmt.Errorf("访问频率过高")
-	}
-	if respData != nil && resp.State {
-		// 解包
-		if unmarshalErr := json.Unmarshal(resp.Data, respData); unmarshalErr != nil {
-			respData = nil
-			helpers.V115Log.Errorf("解包响应数据失败: %s", unmarshalErr.Error())
-			return response, resBytes, nil
-		}
-	}
-	if resp.Code != 0 {
-		return response, resBytes, fmt.Errorf("错误码：%d，错误信息：%s", resp.Code, resp.Message)
-	}
-	return response, resBytes, nil
-}
-
 // doAuthRequest 带重试的认证请求方法（使用全局队列）
 func (c *OpenClient) doAuthRequest(ctx context.Context, url string, req *resty.Request, options *RequestConfig, respData any) (*resty.Response, []byte, error) {
 	if c.AccessToken == "" {
@@ -323,8 +216,10 @@ func (c *OpenClient) doAuthRequest(ctx context.Context, url string, req *resty.R
 
 		// 如果是限流错误，不重试
 		if queueResp.IsThrottled {
-			helpers.V115Log.Warn("检测到限流，停止重试")
-			return queueResp.Response, queueResp.RespBytes, lastErr
+			helpers.V115Log.Warn("检测到限流，等待1分钟后重试")
+			// 等待1分钟后重试
+			time.Sleep(1 * time.Minute)
+			continue
 		}
 
 		// 其他错误开始重试

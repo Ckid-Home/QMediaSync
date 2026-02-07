@@ -767,15 +767,6 @@ func runUpdateProcess() {
 
 	appName := "QMediaSync.exe"
 	appPath := filepath.Join(helpers.RootDir, appName)
-	// backupAppPath := filepath.Join(backupDir, appName)
-	// 跳过备份
-	// if helpers.PathExists(appPath) {
-	// 	fmt.Printf("备份 %s...\n", appName)
-	// 	if err := helpers.CopyFile(appPath, backupAppPath); err != nil {
-	// 		fmt.Printf("备份主程序失败: %v\n", err)
-	// 	}
-	// }
-
 	newAppPath := filepath.Join(updateDir, appName)
 	if helpers.PathExists(newAppPath) {
 		fmt.Printf("更新 %s...\n", appName)

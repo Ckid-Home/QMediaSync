@@ -197,10 +197,10 @@ func (s *ScanOpenlistImpl) startPathWorkWithLimiter(workerID int) {
 						continue fileloop
 					}
 				}
-				page++
-				if page*limit >= int(fsList.Total) {
+				if len(fsList.Content) < limit {
 					break pageloop
 				}
+				page++
 			}
 			verr := s.processVideoFile(parentPath, pathId, videoFiles, picFiles, nfoFiles, subFiles)
 			if verr != nil {
