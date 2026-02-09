@@ -172,6 +172,10 @@ func (r *RequestHolder) execute() (string, *http.Response, error) {
 func GetLocation(url string) (string, error) {
 	client := &http.Client{
 		Timeout: 1 * time.Second, // 设置较短超时
+		// 禁用自动重定向，返回最后一个响应
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 
 	resp, err := client.Get(url)
@@ -180,8 +184,5 @@ func GetLocation(url string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-
-	// 只读取Header
-	fmt.Println("Headers:", resp.Header)
 	return resp.Header.Get("Location"), nil
 }

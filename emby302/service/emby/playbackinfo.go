@@ -131,37 +131,22 @@ func TransferPlaybackInfo(c *gin.Context) {
 			itemInfo.Id, source.Attr("Id").Val(), itemInfo.ApiKeyName, itemInfo.ApiKey,
 		)
 		if strings.Contains(path, "baidupan/url") {
-			// newUrl += "&urltype=baidu.com"
-			// 请求这个链接，拿到302跳转链接
-			// 异步发送一个播放 Playback 请求, 触发 emby 解析 strm 视频格式
-			// go func() {
-			logs.Success("发现百度链接，发送一个请求拿到302跳转链接：%s", path)
-			// 	originUrl, err := url.Parse(config.C.Emby.Host + itemInfo.PlaybackInfoUri)
-			// 	logs.Success("异步发送一个播放 Playback 请求, 触发 emby 解析 strm 视频格式: %s", originUrl.String())
-			// 	if err != nil {
-			// 		return
-			// 	}
-			// 	q := originUrl.Query()
-			// 	q.Set("IsPlayback", "true")
-			// 	q.Set("AutoOpenLiveStream", "true")
-			// 	originUrl.RawQuery = q.Encode()
-			resp, err := https.Post(path).DoSingle()
-			if err != nil {
-				logs.Error("请求302跳转链接失败：", err)
-				return err
+			logs.Success("发现百度网盘链接，发送一个请求拿到直链：%s", path)
+			location, lerr := https.GetLocation(path)
+			if lerr != nil {
+				logs.Error("请求302跳转链接失败：", lerr)
+				return lerr
 			}
-			newUrl = resp.Header.Get("Location")
-			logs.Success("302跳转链接：%s", newUrl)
-			// 	if err != nil {
-			// 		return
-			// 	}
-			// 	resp.Body.Close()
-			// }()
-			// finalPath := config.C.Emby.Strm.MapPath(strmUrl)
+			logs.Success("百度网盘直链地址：%s", location)
+			if !strings.Contains(location, "proxy-115") {
+				// 设置中要求使用本地代理播放，返回默认值
+				newUrl = location
+			} else {
+				logs.Warn("直链地址包含 proxy-115，不能返回直链，要求回源处理")
+			}
 
 		}
 		source.Put("DirectStreamUrl", jsons.FromValue(newUrl))
-
 		source.Put("SupportsTranscoding", jsons.FromValue(false))
 		source.DelKey("TranscodingUrl")
 		source.DelKey("TranscodingSubProtocol")
