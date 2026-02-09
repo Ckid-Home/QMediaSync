@@ -254,10 +254,17 @@ func GetBaiduPanUrlByPickCode(c *gin.Context) {
 		} else {
 			helpers.AppLogger.Infof("从缓存中查询到百度网盘下载链接: %s => %s", pickCode, cachedUrl)
 		}
-		// 跳转到本地代理
-		proxyUrl := fmt.Sprintf("/proxy-115?baidupan=1&url=%s", url.QueryEscape(cachedUrl))
-		helpers.AppLogger.Infof("通过本地代理访问百度网盘下载链接，非qms 8095播放: %s", url.QueryEscape(cachedUrl))
-		c.Redirect(http.StatusFound, proxyUrl)
+		// 检查是否开启了本地播放代理，如果开启则跳转到代理链接
+		if models.SettingsGlobal.LocalProxy == 1 {
+			// 跳转到本地代理
+			proxyUrl := fmt.Sprintf("/proxy-115?baidupan=1&url=%s", url.QueryEscape(cachedUrl))
+			helpers.AppLogger.Infof("通过本地代理访问百度网盘下载链接，非qms 8095播放: %s", url.QueryEscape(cachedUrl))
+			c.Redirect(http.StatusFound, proxyUrl)
+			return
+		} else {
+			c.Redirect(http.StatusFound, cachedUrl)
+			return
+		}
 	}
 
 }
