@@ -111,8 +111,8 @@ func Redirect2OpenlistLink(c *gin.Context) {
 	if strmUrl == "" {
 		strmUrl = embyPath
 	}
-
-	// 4 如果是远程地址 (strm), 重定向处理
+	isProxyUrl := ""
+	// 4 如果是远程地址 (strm) 且不包含qmediasync的本地代理播放链接, 重定向处理
 	if urls.IsRemote(strmUrl) || strings.HasPrefix(strmUrl, "http") || strings.HasPrefix(strmUrl, "nfs:") {
 		// 异步发送一个播放 Playback 请求, 触发 emby 解析 strm 视频格式
 		// go func() {
@@ -134,10 +134,15 @@ func Redirect2OpenlistLink(c *gin.Context) {
 		// }()
 		// finalPath := config.C.Emby.Strm.MapPath(strmUrl)
 		finalPath := getFinalRedirectLink(strmUrl, c.Request.Header.Clone())
-		logs.Success("重定向 strm: %s", finalPath)
-		c.Header(cache.HeaderKeyExpired, cache.Duration(time.Minute*10))
-		c.Redirect(http.StatusTemporaryRedirect, finalPath)
-		return
+		if !strings.Contains(finalPath, "/proxy-115") {
+			logs.Success("重定向 strm: %s", finalPath)
+			c.Header(cache.HeaderKeyExpired, cache.Duration(time.Minute*10))
+			c.Redirect(http.StatusTemporaryRedirect, finalPath)
+			return
+		} else {
+			logs.Warn("重定向 strm 包含qmediasync本地代理播放链接，回源处理（会走NAS流量）: %s", finalPath)
+			isProxyUrl = finalPath
+		}
 	}
 
 	// 5 如果是本地地址, 回源处理
@@ -146,8 +151,8 @@ func Redirect2OpenlistLink(c *gin.Context) {
 	pattern := `^[A-Za-z]:`
 	matchedWin, _ := regexp.MatchString(pattern, embyPath)
 	// \\开头是Emby网络共享地址
-	if strings.HasPrefix(embyPath, "/") || matchedWin || strings.HasPrefix(embyPath, "\\") {
-		logs.Info("本地媒体: %s, 回源处理", embyPath)
+	if strings.HasPrefix(embyPath, "/") || matchedWin || strings.HasPrefix(embyPath, "\\") || isProxyUrl != "" {
+		logs.Info("本地或代理路径: %s, 回源处理", embyPath)
 		newUri := strings.Replace(c.Request.RequestURI, "stream", "original", 1)
 		newUri = strings.Replace(newUri, "universal", "original", 1)
 		c.Redirect(http.StatusTemporaryRedirect, newUri)
