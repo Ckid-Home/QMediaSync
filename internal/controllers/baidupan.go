@@ -2,11 +2,14 @@ package controllers
 
 import (
 	"Q115-STRM/internal/baidupan"
+	"Q115-STRM/internal/db"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -189,4 +192,72 @@ func ConfirmBaiDuPanOAuthCode(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "确认OAuth登录成功", Data: nil})
+}
+
+// 通过百度网盘文件的fsid（参数名叫pickcode，跟115保持一致）获取下载链接
+func GetBaiduPanUrlByPickCode(c *gin.Context) {
+	type fileIdReq struct {
+		UserId   string `json:"userid" form:"userid"`
+		PickCode string `json:"pickcode" form:"pickcode"`
+		Force    int    `json:"force" form:"force"`
+	}
+	var req fileIdReq
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
+		return
+	}
+	pickCode := req.PickCode
+	userId := req.UserId
+	var account *models.Account
+	if userId == "" {
+		// 查询SyncFile
+		syncFile := models.GetFileByPickCode(pickCode)
+		if syncFile == nil {
+			c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "文件PickCode不存在", Data: nil})
+			return
+		}
+		var err error
+		account, err = models.GetAccountById(syncFile.AccountId)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "账号ID不存在", Data: nil})
+			return
+		}
+	} else {
+		var err error
+		// 通过userId查询账号
+		account, err = models.GetAccountByUserId(userId)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "用户ID不存在", Data: nil})
+			return
+		}
+	}
+	ua := c.Request.UserAgent()
+	client := account.GetBaiDuPanClient()
+	cacheKey := fmt.Sprintf("baidupanurl:%s, ua=%s", pickCode, ua)
+	if keyLock.LockWithTimeout(cacheKey, 10*time.Second) {
+		defer keyLock.Unlock(cacheKey)
+		cachedUrl := string(db.Cache.Get(cacheKey))
+		if cachedUrl == "" {
+			fsDetail, err := client.GetFileDetail(context.Background(), pickCode, 1)
+			if err != nil {
+				c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取百度网盘文件详情失败", Data: nil})
+				return
+			}
+			cachedUrl = fmt.Sprintf("%s&access_token=%s", fsDetail.Dlink, account.Token)
+			if cachedUrl == "" {
+				c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取百度网盘下载链接失败", Data: nil})
+				return
+			}
+			helpers.AppLogger.Infof("从接口中查询到百度网盘下载链接: %s => %s", pickCode, cachedUrl)
+			// 缓存8小时
+			db.Cache.Set(cacheKey, []byte(cachedUrl), 28800)
+		} else {
+			helpers.AppLogger.Infof("从缓存中查询到百度网盘下载链接: %s => %s", pickCode, cachedUrl)
+		}
+		// 跳转到本地代理
+		helpers.AppLogger.Infof("通过本地代理访问百度网盘下载链接，非qms 8095播放: %s", cachedUrl)
+		proxyUrl := fmt.Sprintf("/proxy-115?baidupan=1&url=%s", url.QueryEscape(cachedUrl))
+		c.Redirect(http.StatusFound, proxyUrl)
+	}
+
 }

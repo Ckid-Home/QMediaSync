@@ -439,11 +439,14 @@ func setRouter(r *gin.Engine) {
 	r.GET("/path/list", controllers.GetPathList) // 路径列表接口
 	r.POST("/emby/webhook", controllers.Webhook)
 	r.POST("/api/login", controllers.LoginAction)
-	r.GET("/115/url/*filename", controllers.Get115UrlByPickCode) // 查询115直链 by pickcode 支持iso，路径最后一部分是.扩展名格式
-	r.GET("/115/newurl", controllers.Get115UrlByPickCode)        // 查询115直链 by pickcode
-	r.GET("/openlist/url", controllers.GetOpenListFileUrl)       // 查询OpenList直链
+	r.GET("/115/url/*filename", controllers.Get115UrlByPickCode)           // 查询115直链 by pickcode 支持iso，路径最后一部分是.扩展名格式
+	r.GET("/115/newurl", controllers.Get115UrlByPickCode)                  // 查询115直链 by pickcode
+	r.GET("/baidupan/url/*filename", controllers.GetBaiduPanUrlByPickCode) // 查询百度网盘直链 by fsid 支持iso，路径最后一部分是.扩展名格式
 
-	r.GET("/proxy-115", controllers.Proxy115)                            // 115CDN反代路由
+	r.GET("/openlist/url", controllers.GetOpenListFileUrl) // 查询OpenList直链
+
+	r.GET("/proxy-115", controllers.Proxy115) // 115CDN反代路由
+
 	r.GET("/api/scrape/tmp-image", controllers.ScrapeTmpImage)           // 获取临时图片
 	r.GET("/api/scrape/records/export", controllers.ExportScrapeRecords) // 导出刮削记录
 	r.GET("/api/logs/ws", controllers.LogWebSocket)                      // WebSocket日志查看
