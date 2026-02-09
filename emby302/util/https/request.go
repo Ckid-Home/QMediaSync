@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"time"
 )
 
 type RequestHolder struct {
@@ -166,4 +167,21 @@ func (r *RequestHolder) execute() (string, *http.Response, error) {
 	}
 
 	return inner(r.method, r.url, r.header, r.body, r.redirect, 0)
+}
+
+func GetLocation(url string) (string, error) {
+	client := &http.Client{
+		Timeout: 1 * time.Second, // 设置较短超时
+	}
+
+	resp, err := client.Get(url)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// 只读取Header
+	fmt.Println("Headers:", resp.Header)
+	return resp.Header.Get("Location"), nil
 }
