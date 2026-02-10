@@ -83,9 +83,9 @@ func (m *EmbeddedManager) Stop() error {
 	helpers.AppLogger.Info("停止内嵌的 PostgreSQL...")
 
 	if m.process != nil {
-		postgresPath := filepath.Join(m.config.BinaryPath, "pg_ctl")
+		postgresPath := "pg_ctl"
 		if runtime.GOOS == "windows" {
-			postgresPath += ".exe"
+			postgresPath = filepath.Join(m.config.BinaryPath, "pg_ctl.exe")
 		}
 		// 使用 pg_ctl 优雅停止，使用qms用户执行
 		output, err := m.userSwitcher.RunCommandAsUser(postgresPath, "stop", "-D", m.config.DataDir, "-m", "fast")
@@ -163,9 +163,9 @@ func (m *EmbeddedManager) prepareDataDir() error {
 	}
 
 	// 使用 qms 用户初始化数据库
-	initdbPath := filepath.Join(m.config.BinaryPath, "initdb")
+	initdbPath := "initdb"
 	if runtime.GOOS == "windows" {
-		initdbPath += ".exe"
+		initdbPath = filepath.Join(m.config.BinaryPath, "initdb.exe")
 	}
 	output, err := m.userSwitcher.RunCommandAsUser(initdbPath, "-D", m.config.DataDir, "-U", m.config.User, "--encoding=UTF8", "--locale=C", "--auth=trust")
 	if err != nil {
@@ -273,10 +273,10 @@ host    all             all             ::1/128                 trust
 
 func (m *EmbeddedManager) startPostgresProcess() error {
 	tmpPath := filepath.Join(filepath.Dir(m.config.DataDir), "tmp")
-	postgresPath := filepath.Join(m.config.BinaryPath, "pg_ctl")
 	var cmd *exec.Cmd
+	postgresPath := "pg_ctl"
 	if runtime.GOOS == "windows" {
-		postgresPath += ".exe"
+		postgresPath = filepath.Join(m.config.BinaryPath, "pg_ctl.exe")
 	}
 	cmd, err := m.userSwitcher.RunCommandAsUserWithEnv(
 		map[string]string{
@@ -311,9 +311,9 @@ func (m *EmbeddedManager) waitForPostgres(ctx context.Context) error {
 		case <-timeout:
 			return fmt.Errorf("等待 PostgreSQL 启动超时")
 		case <-ticker.C:
-			pgIsReadyPath := filepath.Join(m.config.BinaryPath, "pg_isready")
+			pgIsReadyPath := "pg_isready"
 			if runtime.GOOS == "windows" {
-				pgIsReadyPath += ".exe"
+				pgIsReadyPath = filepath.Join(m.config.BinaryPath, "pg_isready.exe")
 			}
 			cmd := exec.Command(pgIsReadyPath, "-h", m.config.Host, "-p",
 				fmt.Sprintf("%d", m.config.Port), "-U", m.config.User)
