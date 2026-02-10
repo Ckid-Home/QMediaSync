@@ -174,11 +174,46 @@
             margin-bottom: 15px;
             font-size: 14px;
         }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .warning-box.visible {
+            display: block;
+        }
+
+        .warning-box .warning-title {
+            color: #856404;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .warning-box .warning-text {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="title">数据库配置</h1>
+
+        {{ if .isRestricted }}
+        <div class="warning-box visible">
+            <div class="warning-title">⚠️ 位置警告</div>
+            <div class="warning-text">{{ .warningMsg }}</div>
+        </div>
+        {{ end }}
 
         <div id="loading" class="loading">
             <div class="spinner"></div>

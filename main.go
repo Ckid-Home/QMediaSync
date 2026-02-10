@@ -268,7 +268,7 @@ func getDataAndConfigDir() {
 		if appData == "" {
 			appData = os.Getenv("APPDATA")
 		}
-		dataDir = filepath.Join(appData, AppName, "postgres") // 数据库目录
+		dataDir = filepath.Join(helpers.RootDir, "postgres")  // 数据库目录
 		configDir = filepath.Join(appData, AppName, "config") // 配置目录
 		err := os.MkdirAll(dataDir, 0755)
 		if err != nil {
@@ -817,14 +817,51 @@ func replaceDir(srcDir, dstDir, backupDir string) {
 	}
 }
 
+func isInRestrictedDirectory() (bool, string) {
+	if runtime.GOOS != "windows" {
+		return false, ""
+	}
+
+	exePath, err := os.Executable()
+	if err != nil {
+		return false, ""
+	}
+	exeDir := filepath.Dir(exePath)
+
+	driveLetter := strings.ToUpper(string(exeDir[0]))
+	log.Printf("应用程序路径: %s, 盘符: %s", exePath, driveLetter)
+	if driveLetter == "C" {
+		return true, "应用程序位于 C 盘，建议将应用程序移动到其他盘符（如 D 盘、E 盘等）以避免权限问题"
+	}
+
+	restrictedPaths := []string{
+		"Program Files",
+		"Program Files (x86)",
+		"ProgramData",
+		"Windows",
+	}
+
+	for _, restrictedPath := range restrictedPaths {
+		log.Printf("检查目录: %s, 是否包含受限路径: %s", exeDir, restrictedPath)
+		if strings.Contains(exeDir, restrictedPath) {
+			return true, fmt.Sprintf("应用程序位于受限目录 '%s' 中，建议将应用程序移动到普通用户目录或其他非系统目录", restrictedPath)
+		}
+	}
+
+	return false, ""
+}
+
 func StartConfigWebServer() {
 	if helpers.IsRelease {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.Default()
 	r.GET("/", func(c *gin.Context) {
+		isRestricted, warningMsg := isInRestrictedDirectory()
 		c.HTML(200, "db_config.html", gin.H{
-			"title": "数据库配置",
+			"title":        "数据库配置",
+			"isRestricted": isRestricted,
+			"warningMsg":   warningMsg,
 		})
 	})
 
