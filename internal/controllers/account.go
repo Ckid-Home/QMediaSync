@@ -116,11 +116,6 @@ func CreateTmpAccount(c *gin.Context) {
 	if tmpAccount.SourceType == models.SourceTypeBaiduPan {
 		appId = helpers.GlobalConfig.BaiDuPanAppId
 	}
-	var v115AppIdMap = map[string]string{
-		"Q115-STRM": helpers.GlobalConfig.Open115AppId,
-		"MQ的媒体库":    helpers.GlobalConfig.Open115TestAppId,
-		"自定义":       "",
-	}
 
 	if models.SourceType115 == tmpAccount.SourceType {
 		if tmpAccount.AppIdName == "自定义" {
@@ -132,12 +127,6 @@ func CreateTmpAccount(c *gin.Context) {
 			}
 		} else {
 			// 检查appIDName是否有效
-			ok := false
-			appId, ok = v115AppIdMap[tmpAccount.AppIdName]
-			if !ok {
-				c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "无效的115开放平台应用ID名称", Data: nil})
-				return
-			}
 			appId = tmpAccount.AppIdName
 		}
 	}

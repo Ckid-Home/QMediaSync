@@ -349,7 +349,7 @@ if gh release create "$TAG" \
     MEOW_API_URL="${MEOW_API_URL:-}"
     
     # Escape special characters for JSON
-    MEOW_MESSAGE=$(echo "$RELEASE_BODY" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
+    MEOW_MESSAGE=$(echo "$RELEASE_BODY")
     
     # Send message to MeoW
     MEOW_RESPONSE=$(curl -s -X POST "$MEOW_API_URL" \

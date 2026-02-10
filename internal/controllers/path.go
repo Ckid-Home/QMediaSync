@@ -268,7 +268,7 @@ func GetBaiduPanPathList(parentId string, accountId uint) ([]DirResp, error) {
 	}
 	// helpers.AppLogger.Infof("成功获取百度网盘文件列表, 父目录ID: %s, 文件数量: %d", parentId, len(resp.Data))
 	items := make([]DirResp, 0)
-	if parentId != "" || parentId != "/" {
+	if parentId != "" && parentId != "/" {
 		// 需要加入回到上一级
 		parentParent := filepath.ToSlash(filepath.Dir(parentId))
 		if parentParent == "" || parentParent == "\\" {

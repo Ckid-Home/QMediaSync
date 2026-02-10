@@ -193,11 +193,11 @@ func extractPickCodeFromPath(path string) string {
 	}
 	// 检查路径是否为openlist格式，openlist中path等于pickcode, 格式为/d/{path}(?sign=xxx)
 	// 判断路径是否以/d开头
-	if strings.HasPrefix(u.Path, "/d/") {
-		// 选取/d之后的部分作为pickcode
-		return strings.TrimPrefix(u.Path, "/d")
-	}
-	return ""
+	// if strings.HasPrefix(u.Path, "/d/") {
+	// 	// 选取/d之后的部分作为pickcode
+	// 	return path
+	// }
+	return path
 }
 
 var EmbyMediaInfoStart bool = false

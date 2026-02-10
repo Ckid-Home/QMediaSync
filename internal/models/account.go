@@ -31,17 +31,6 @@ func (account *Account) TableName() string {
 	return "account"
 }
 
-func (account *Account) GetAppId() string {
-	switch account.AppId {
-	case "Q115-STRM":
-		return helpers.GlobalConfig.Open115AppId
-	case "MQ的媒体库":
-		return helpers.GlobalConfig.Open115TestAppId
-	default:
-		return account.AppId
-	}
-}
-
 // 更新token和refreshToken
 func (account *Account) UpdateToken(token string, refreshToken string, expiresTime int64) bool {
 	now := time.Now().Unix()
@@ -81,8 +70,7 @@ func (account *Account) UpdateUser(userId string, username string) bool {
 
 // 如果是normal模式，创建一个新的客户端，不启用限速器
 func (account *Account) Get115Client() *v115open.OpenClient {
-	appId := account.GetAppId()
-	return v115open.GetClient(account.ID, appId, account.Token, account.RefreshToken)
+	return v115open.GetClient(account.ID, account.AppId, account.Token, account.RefreshToken)
 }
 
 func (account *Account) GetOpenListClient() *openlist.Client {
