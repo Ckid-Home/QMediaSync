@@ -296,7 +296,7 @@ func getRootDir() string {
 		exPath = filepath.Dir(ex)
 	} else {
 		if runtime.GOOS == "windows" {
-			exPath = "D:\\Dev\\qmediasync"
+			exPath, _ = os.Getwd()
 		} else {
 			exPath = "/home/qicfan/dev/q115-strm-go"
 		}
@@ -391,11 +391,12 @@ func initOthers() {
 		qps = 2
 	}
 	v115open.SetGlobalExecutorConfig(qps, qps*60, qps*3600)
-	models.LoadScrapeSettings()      // 从数据库加载刮削设置
-	models.InitDQ()                  // 初始化下载队列
-	models.InitUQ()                  // 初始化上传队列
-	models.InitNotificationManager() // 初始化通知管理器
-	models.GetEmbyConfig()           // 加载Emby配置
+	models.LoadScrapeSettings()          // 从数据库加载刮削设置
+	models.InitDQ()                      // 初始化下载队列
+	models.InitUQ()                      // 初始化上传队列
+	models.InitNotificationManager()     // 初始化通知管理器
+	controllers.StartListenTelegramBot() // 初始化TelegramBot监听
+	models.GetEmbyConfig()               // 加载Emby配置
 	helpers.SubscribeSync(helpers.V115TokenInValidEvent, models.HandleV115TokenInvalid)
 	helpers.SubscribeSync(helpers.SaveOpenListTokenEvent, models.HandleOpenListTokenSaveSync)
 	models.FailAllRunningSyncTasks() // 将所有运行中的同步任务设置为失败状态
