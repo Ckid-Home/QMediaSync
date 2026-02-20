@@ -99,7 +99,7 @@ func (app *App) Stop() {
 	// 关闭上传下载队列
 	models.GlobalDownloadQueue.Stop()
 	models.GlobalUploadQueue.Stop()
-	// 关闭定时任务
+	// 关闭定时任务（包含备份定时任务）
 	synccron.GlobalCron.Stop()
 	// 关闭数据库
 	if app.dbManager != nil {
@@ -281,6 +281,11 @@ func getDataAndConfigDir() {
 			fmt.Printf("创建数据目录失败: %v\n", err)
 			panic("创建数据目录失败")
 		}
+		err = os.MkdirAll(configDir, 0755)
+		if err != nil {
+			fmt.Printf("创建配置目录失败: %v\n", err)
+			panic("创建配置目录失败")
+		}
 		helpers.DataDir = dataDir
 		helpers.ConfigDir = configDir
 	} else {
@@ -392,7 +397,9 @@ func initOthers() {
 	// if helpers.IsRelease {
 	// 启动同步任务队列管理器
 	synccron.InitNewSyncQueueManager()
-	synccron.InitCron() // 初始化定时任务
+	synccron.InitCron() // 初始化定时任务（包含备份定时任务）
+	// 初始化备份服务
+	models.InitBackupService()
 	// }
 	// 将所有刮削中和整理中的记录改为未执行
 	models.ResetScrapePathStatus()
@@ -418,7 +425,6 @@ func setRouter(r *gin.Engine) {
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(200, "index.html", gin.H{})
 	})
-	r.GET("/path/list", controllers.GetPathList) // 路径列表接口
 	r.POST("/emby/webhook", controllers.Webhook)
 	r.POST("/api/login", controllers.LoginAction)
 	r.GET("/115/url/*filename", controllers.Get115UrlByPickCode)           // 查询115直链 by pickcode 支持iso，路径最后一部分是.扩展名格式
@@ -463,18 +469,19 @@ func setRouter(r *gin.Engine) {
 		api.GET("/update/progress", controllers.UpdateProgress)     // 获取更新进度
 		api.POST("/update/cancel", controllers.CancelUpdate)        // 取消更新
 		api.GET("/user/info", controllers.GetUserInfo)
-		api.GET("/path/list", controllers.GetPathList)
+		api.GET("/path/list", controllers.GetPathList)     // 目录列表
+		api.POST("/path/create", controllers.CreateDir)    // 创建目录接口
 		api.GET("/path/files", controllers.GetNetFileList) // 查询网盘文件列表
 		api.POST("/user/change", controllers.ChangePassword)
-		api.GET("/auth/115-status", controllers.Get115Status)                                      // 查询115状态
-		api.POST("/auth/115-qrcode-open", controllers.GetLoginQrCodeOpen)                          // 获取115开放平台登录二维码
-		api.POST("/auth/115-qrcode-status", controllers.GetQrCodeStatus)                           // 查询115二维码扫码状态
-		api.POST("/setting/http-proxy", controllers.UpdateHttpProxy)                               // 更改HTTP代理
-		api.GET("/setting/http-proxy", controllers.GetHttpProxy)                                   // 获取HTTP代理
-		api.POST("/setting/test-http-proxy", controllers.TestHttpProxy)                            // 测试HTTP代理
-		api.GET("/setting/telegram", controllers.GetTelegram)                                      // 获取telegram消息通知配置
-		api.POST("/setting/telegram", controllers.UpdateTelegram)                                  // 更改telegram消息通知配置
-		api.POST("/telegram/test", controllers.TestTelegram)                                       // 测试telegram连通性
+		api.GET("/auth/115-status", controllers.Get115Status)             // 查询115状态
+		api.POST("/auth/115-qrcode-open", controllers.GetLoginQrCodeOpen) // 获取115开放平台登录二维码
+		api.POST("/auth/115-qrcode-status", controllers.GetQrCodeStatus)  // 查询115二维码扫码状态
+		api.POST("/setting/http-proxy", controllers.UpdateHttpProxy)      // 更改HTTP代理
+		api.GET("/setting/http-proxy", controllers.GetHttpProxy)          // 获取HTTP代理
+		api.POST("/setting/test-http-proxy", controllers.TestHttpProxy)   // 测试HTTP代理
+		// api.GET("/setting/telegram", controllers.GetTelegram)                                      // 获取telegram消息通知配置
+		// api.POST("/setting/telegram", controllers.UpdateTelegram)                                  // 更改telegram消息通知配置
+		// api.POST("/telegram/test", controllers.TestTelegram)                                       // 测试telegram连通性
 		api.GET("/setting/notification/channels", controllers.GetNotificationChannels)             // 获取所有通知渠道
 		api.POST("/setting/notification/channels/telegram", controllers.CreateTelegramChannel)     // 创建Telegram渠道
 		api.GET("/setting/notification/channels/telegram/:id", controllers.GetTelegramChannel)     // 查询Telegram渠道
@@ -575,6 +582,19 @@ func setRouter(r *gin.Engine) {
 		api.GET("/download/queue/status", controllers.DownloadQueueStatus)                               // 查询下载队列状态
 		api.POST("/download/queue/clear-success-failed", controllers.ClearDownloadSuccessAndFailedTasks) // 清除下载队列中已完成和失败的任务
 
+		// 备份与恢复相关路由
+		api.GET("/backup/list", controllers.GetBackupList)               // 获取备份列表
+		api.GET("/backup/records/:id", controllers.GetBackupRecord)      // 获取备份记录详情
+		api.POST("/backup/create", controllers.CreateBackup)             // 创建手动备份
+		api.DELETE("/backup/records/:id", controllers.DeleteBackup)      // 删除备份记录
+		api.POST("/backup/restore", controllers.RestoreFromBackup)       // 从备份恢复
+		api.POST("/backup/upload-restore", controllers.UploadAndRestore) // 上传文件并恢复
+		api.GET("/backup/download/:id", controllers.DownloadBackup)      // 下载备份文件
+		api.GET("/backup/config", controllers.GetBackupConfig)           // 获取备份配置
+		api.PUT("/backup/config", controllers.UpdateBackupConfig)        // 更新备份配置
+		api.GET("/backup/status", controllers.GetBackupStatus)           // 获取备份状态
+		api.POST("/backup/cancel", controllers.CancelBackup)             // 取消正在运行的备份
+
 	}
 }
 
@@ -583,6 +603,8 @@ func initEnv() bool {
 	// 将版本写入helper
 	helpers.Version = Version
 	helpers.ReleaseDate = PublishDate
+	// 加载环境变量配置
+	helpers.LoadEnvFromFile(filepath.Join(helpers.RootDir, "config", ".env"))
 	if DEFAULT_SC_API_KEY != "" {
 		helpers.DEFAULT_SC_API_KEY = DEFAULT_SC_API_KEY
 	} else {
@@ -608,8 +630,6 @@ func initEnv() bool {
 	} else {
 		helpers.ENCRYPTION_KEY = os.Getenv("ENCRYPTION_KEY")
 	}
-	// 加载环境变量配置
-	helpers.LoadEnvFromFile(filepath.Join(helpers.RootDir, "config", ".env"))
 	initTimeZone()        // 设置东8区
 	getDataAndConfigDir() // 获取数据库数据目录和配置文件目录
 	log.Printf("当前工作目录:%s\n", helpers.RootDir)
