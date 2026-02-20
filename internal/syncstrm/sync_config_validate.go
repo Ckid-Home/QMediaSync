@@ -24,6 +24,7 @@ var uploadDirNames = []string{
 }
 
 type SyncStrmConfig struct {
+	StrmBaseUrl           string                        `json:"strm_base_url"`             // 视频文件URL基础路径
 	MinVideoSize          int64                         `json:"min_video_size"`            // 视频文件最小大小，单位为MB
 	EnableDownloadMeta    int64                         `json:"enable_download_meta"`      // 是否下载元数据文件，0为不下载，1为下载
 	NetNotFoundFileAction models.SyncTreeItemMetaAction `json:"net_not_found_file_action"` // 网盘文件不存在时的操作，0为忽略，1为上传，2-删除

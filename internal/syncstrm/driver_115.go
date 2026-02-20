@@ -156,7 +156,7 @@ func (d *open115Driver) GetPathIdByPath(ctx context.Context, path string) (strin
 
 func (d *open115Driver) MakeStrmContent(sf *SyncFileCache) string {
 	// 生成URL
-	u, _ := url.Parse(models.SettingsGlobal.StrmBaseUrl)
+	u, _ := url.Parse(d.s.Config.StrmBaseUrl)
 	ext := filepath.Ext(sf.FileName)
 	u.Path = fmt.Sprintf("/115/url/video%s", ext)
 	params := url.Values{}

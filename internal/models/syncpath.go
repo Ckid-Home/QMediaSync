@@ -186,6 +186,7 @@ func (sp *SyncPath) Update(sourceType SourceType, accountId uint, baseCid, local
 		"local_path":    localPath,
 		"remote_path":   remotePath,
 		"enable_cron":   enableCron,
+		"update_at":     time.Now().Unix(),
 	}
 	strmSettingMap := sp.SettingStrm.ToMap(true)
 	maps.Copy(updates, strmSettingMap)
@@ -316,6 +317,8 @@ func CreateSyncPath(sourceType SourceType, accountId uint, baseCid, localPath, r
 		"account_id":    accountId,
 		"enable_cron":   enableCron,
 		"custom_config": customConfig,
+		"create_at":     time.Now().Unix(),
+		"update_at":     time.Now().Unix(),
 	}
 	strmSettingMap := syncPathSetting.ToMap(true)
 	maps.Copy(syncPathData, strmSettingMap)

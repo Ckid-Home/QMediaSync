@@ -5,6 +5,7 @@ import (
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/v115open"
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -175,15 +176,6 @@ func GetOpenListPath(parentPath string, accountId uint) ([]DirResp, error) {
 	}
 	// 只返回文件夹列表
 	folders := make([]DirResp, 0)
-	if parentPath != "" && parentPath != "/" && parentPath != "\\" {
-		// 加入返回上级目录
-		p := filepath.Dir(parentPath)
-		folders = append(folders, DirResp{
-			Id:   p,
-			Name: "..",
-			Path: p,
-		})
-	}
 	for _, item := range resp.Content {
 		if item.IsDir {
 			folders = append(folders, DirResp{
@@ -212,37 +204,6 @@ func Get115PathList(parentId string, accountId uint) ([]DirResp, error) {
 	}
 	helpers.AppLogger.Infof("成功获取115目录列表, 父目录ID: %s, 文件数量: %d", parentId, len(resp.Data))
 	folders := make([]DirResp, 0)
-	if parentId != "0" {
-		// 需要加入回到上一级
-		if len(resp.Path) == 1 {
-			// 如果只有一级直接定义上一级为根目录
-			folders = append(folders, DirResp{
-				Id:   "0",
-				Name: "..",
-				Path: "",
-			})
-		} else {
-			parentPathStr := ""
-			parentPathId := "0"
-			for idx, p := range resp.Path {
-				if p.FileId == "0" {
-					// 跳过根目录
-					continue
-				}
-				if idx == len(resp.Path)-1 {
-					// 最后一个是当前目录，跳过
-					break
-				}
-				parentPathStr = filepath.Join(parentPathStr, p.Name)
-				parentPathId = string(p.FileId)
-			}
-			folders = append(folders, DirResp{
-				Id:   parentPathId,
-				Name: "..",
-				Path: parentPathStr,
-			})
-		}
-	}
 	// 构建Path
 	for _, item := range resp.Data {
 		parentPath := resp.PathStr
@@ -276,18 +237,6 @@ func GetBaiduPanPathList(parentId string, accountId uint) ([]DirResp, error) {
 	}
 	// helpers.AppLogger.Infof("成功获取百度网盘文件列表, 父目录ID: %s, 文件数量: %d", parentId, len(resp.Data))
 	items := make([]DirResp, 0)
-	if parentId != "" && parentId != "/" {
-		// 需要加入回到上一级
-		parentParent := filepath.ToSlash(filepath.Dir(parentId))
-		if parentParent == "" || parentParent == "\\" {
-			parentParent = "/"
-		}
-		items = append(items, DirResp{
-			Id:   parentParent,
-			Name: "..",
-			Path: parentParent,
-		})
-	}
 	// 构建Path
 	for _, item := range fileList {
 		// 去掉item.Path开头的/
@@ -299,11 +248,6 @@ func GetBaiduPanPathList(parentId string, accountId uint) ([]DirResp, error) {
 		})
 	}
 	return items, nil
-}
-
-// 创建文件夹
-func CreateFolder(c *gin.Context) {
-
 }
 
 type FileItem struct {
@@ -331,7 +275,7 @@ func GetNetFileList(c *gin.Context) {
 		req.Page = 1
 	}
 	if req.PageSize == 0 {
-		req.PageSize = 100
+		req.PageSize = 1150
 	}
 	account, err := models.GetAccountById(req.AccountId)
 	if err != nil {
@@ -341,11 +285,11 @@ func GetNetFileList(c *gin.Context) {
 	var list []*FileItem
 	switch account.SourceType {
 	case models.SourceTypeOpenList:
-		list, err = GetOpenListFiles(req.ParentId, account, req.Page, req.PageSize)
+		list, err = getOpenlistDirs(req.ParentId, account, req.Page, req.PageSize)
 	case models.SourceType115:
-		list, err = Get115Files(req.ParentId, account, req.Page, req.PageSize)
+		list, err = get115Dirs(req.ParentId, account, req.Page, req.PageSize)
 	case models.SourceTypeBaiduPan:
-		list, err = GetBaiduPanFiles(req.ParentId, account, req.Page, req.PageSize)
+		list, err = getBaiduPanDirs(req.ParentId, account, req.Page, req.PageSize)
 	default:
 		// 报错
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "未知的网盘类型", Data: nil})
@@ -358,7 +302,7 @@ func GetNetFileList(c *gin.Context) {
 	c.JSON(http.StatusOK, APIResponse[[]*FileItem]{Code: Success, Message: "", Data: list})
 }
 
-func GetOpenListFiles(parentPath string, account *models.Account, page, pageSize int) ([]*FileItem, error) {
+func getOpenlistDirs(parentPath string, account *models.Account, page, pageSize int) ([]*FileItem, error) {
 	// 去掉parentPath末尾的/
 	parentPath = strings.TrimSuffix(parentPath, "/")
 	parentPath = strings.TrimSuffix(parentPath, "\\")
@@ -389,10 +333,10 @@ func GetOpenListFiles(parentPath string, account *models.Account, page, pageSize
 	return items, nil
 }
 
-func Get115Files(parentId string, account *models.Account, page, pageSize int) ([]*FileItem, error) {
+func get115Dirs(parentId string, account *models.Account, page, pageSize int) ([]*FileItem, error) {
 	client := account.Get115Client()
 	ctx := context.Background()
-	resp, err := client.GetFsList(ctx, parentId, true, true, true, 0, 200)
+	resp, err := client.GetFsList(ctx, parentId, true, true, true, page, pageSize)
 	if err != nil {
 		helpers.AppLogger.Warnf("获取115目录列表失败: 父目录：%s, 错误:%v", parentId, err)
 		return nil, err
@@ -413,7 +357,7 @@ func Get115Files(parentId string, account *models.Account, page, pageSize int) (
 
 }
 
-func GetBaiduPanFiles(parentId string, account *models.Account, page, pageSize int) ([]*FileItem, error) {
+func getBaiduPanDirs(parentId string, account *models.Account, page, pageSize int) ([]*FileItem, error) {
 	client := account.GetBaiDuPanClient()
 	ctx := context.Background()
 	fileList, fileErr := client.GetFileList(ctx, parentId, 0, 0, int32((page-1)*pageSize), int32(pageSize))
@@ -434,4 +378,135 @@ func GetBaiduPanFiles(parentId string, account *models.Account, page, pageSize i
 		})
 	}
 	return items, nil
+}
+
+// 创建文件夹
+func CreateDir(c *gin.Context) {
+	type createDirReq struct {
+		ParentId   string            `json:"parent_id" form:"parent_id"`
+		ParentPath string            `json:"parent_path" form:"parent_path"`
+		SourceType models.SourceType `json:"source_type" form:"source_type"`
+		AccountId  uint              `json:"account_id" form:"account_id"`
+		Name       string            `json:"name" form:"name"`
+	}
+	var req createDirReq
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
+		return
+	}
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "文件夹名称不能为空", Data: nil})
+		return
+	}
+	// 父目录不能为空
+	if req.ParentPath == "" || req.ParentId == "" {
+		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "父目录不能为空", Data: nil})
+		return
+	}
+	// 文件夹名称不能包含/
+	if strings.Contains(req.Name, "/") {
+		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "文件夹名称不能包含/", Data: nil})
+		return
+	}
+	var err error
+	var pathId string
+	switch req.SourceType {
+	case models.SourceTypeLocal:
+		pathId, err = makeLocalPath(req.ParentId, req.Name)
+	case models.SourceTypeOpenList:
+		pathId, err = makeOpenListPath(req.ParentId, req.Name, req.AccountId)
+	case models.SourceType115:
+		pathId, err = make115PathList(req.ParentId, req.ParentPath, req.Name, req.AccountId)
+	case models.SourceTypeBaiduPan:
+		pathId, err = makeBaiduPanPathList(req.ParentId, req.Name, req.AccountId)
+	default:
+		// 报错
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "未知的同步源类型", Data: nil})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "创建目录失败: " + err.Error(), Data: nil})
+		return
+	}
+	dirResp := DirResp{
+		Id:   pathId,
+		Name: req.Name,
+		Path: filepath.ToSlash(filepath.Join(req.ParentPath, req.Name)),
+	}
+	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "创建目录成功", Data: dirResp})
+}
+
+// 创建本地目录
+func makeLocalPath(parentId string, folderName string) (string, error) {
+	// 检查父目录是否存在
+	if !helpers.PathExists(parentId) {
+		return "", fmt.Errorf("父目录不存在: %s", parentId)
+	}
+	// 构建新目录路径
+	newDir := filepath.Join(parentId, folderName)
+	// 创建目录
+	if err := os.Mkdir(newDir, 0755); err != nil {
+		return "", fmt.Errorf("创建目录失败: %s, 错误: %v", newDir, err)
+	}
+	return newDir, nil
+}
+
+// 创建openlist目录
+func makeOpenListPath(parentId string, folderName string, accountId uint) (string, error) {
+	// 检查父目录是否存在
+	account, err := models.GetAccountById(accountId)
+	if err != nil {
+		return "", fmt.Errorf("获取账号失败: %v", err)
+	}
+	client := account.GetOpenListClient()
+	_, err = client.FileDetail(parentId)
+	if err != nil {
+		return "", fmt.Errorf("获取openlist目录详情失败，目录可能不存在: %v", err)
+	}
+	newDir := filepath.ToSlash(filepath.Join(parentId, folderName))
+	err = client.Mkdir(newDir)
+	if err != nil {
+		return "", fmt.Errorf("创建openlist目录失败: %s, 错误: %v", newDir, err)
+	}
+	return newDir, nil
+}
+
+// 创建115目录
+func make115PathList(parentId, parentPath, folderName string, accountId uint) (string, error) {
+	// 检查父目录是否存在
+	account, err := models.GetAccountById(accountId)
+	if err != nil {
+		return "", fmt.Errorf("获取账号失败: %v", err)
+	}
+	client := account.Get115Client()
+	_, err = client.GetFsDetailByCid(context.Background(), parentId)
+	if err != nil {
+		return "", fmt.Errorf("获取115目录详情失败，目录可能不存在: %v", err)
+	}
+	newDir := filepath.ToSlash(filepath.Join(parentPath, folderName))
+	newPathId, err := client.MkDir(context.Background(), parentId, folderName)
+	if err != nil {
+		return "", fmt.Errorf("创建115目录失败: %s, 错误: %v", newDir, err)
+	}
+	return newPathId, nil
+}
+
+func makeBaiduPanPathList(parentId string, folderName string, accountId uint) (string, error) {
+	// 检查父目录是否存在
+	account, err := models.GetAccountById(accountId)
+	if err != nil {
+		return "", fmt.Errorf("获取账号失败: %v", err)
+	}
+	client := account.GetBaiDuPanClient()
+	_, err = client.GetFileList(context.Background(), parentId, 0, 1, 0, 1)
+	if err != nil {
+		return "", fmt.Errorf("获取百度网盘目录失败，目录可能不存在: %v", err)
+	}
+	// 创建新目录
+	newDir := filepath.ToSlash(filepath.Join(parentId, folderName))
+	err = client.Mkdir(context.Background(), newDir)
+	if err != nil {
+		return "", fmt.Errorf("创建百度网盘目录失败: %s, 错误: %v", newDir, err)
+	}
+	return newDir, nil
 }

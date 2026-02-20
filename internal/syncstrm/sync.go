@@ -169,6 +169,7 @@ func NewSyncStrmFromSyncPath(syncPath *models.SyncPath) *SyncStrm {
 		StrmUrlNeedPath:       syncPath.GetAddPath(),
 		DelEmptyLocalDir:      syncPath.GetDeleteDir() == 1,
 		CheckMetaMtime:        syncPath.GetCheckMetaMtime(),
+		StrmBaseUrl:           syncPath.GetStrmBaseUrl(),
 	}
 	return NewSyncStrm(account, syncPath.ID, syncPath.RemotePath, syncPath.BaseCid, syncPath.LocalPath, config, syncPath.IsFullSync, syncPath.LastSyncAt)
 }
@@ -184,6 +185,8 @@ func NewSyncStrmByPath(account *models.Account, sourcePath, sourcePathId string)
 		NetNotFoundFileAction: models.SyncTreeItemMetaAction(models.SettingsGlobal.UploadMeta),
 		StrmUrlNeedPath:       models.SettingsGlobal.AddPath,
 		DelEmptyLocalDir:      models.SettingsGlobal.DeleteDir == 1,
+		CheckMetaMtime:        models.SettingsGlobal.CheckMetaMtime,
+		StrmBaseUrl:           models.SettingsGlobal.StrmBaseUrl,
 	}
 	return NewSyncStrm(account, 0, sourcePath, sourcePathId, "", config, false, 0)
 }

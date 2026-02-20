@@ -424,7 +424,6 @@ func setRouter(r *gin.Engine) {
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(200, "index.html", gin.H{})
 	})
-	r.GET("/path/list", controllers.GetPathList) // 路径列表接口
 	r.POST("/emby/webhook", controllers.Webhook)
 	r.POST("/api/login", controllers.LoginAction)
 	r.GET("/115/url/*filename", controllers.Get115UrlByPickCode)           // 查询115直链 by pickcode 支持iso，路径最后一部分是.扩展名格式
@@ -469,7 +468,8 @@ func setRouter(r *gin.Engine) {
 		api.GET("/update/progress", controllers.UpdateProgress)     // 获取更新进度
 		api.POST("/update/cancel", controllers.CancelUpdate)        // 取消更新
 		api.GET("/user/info", controllers.GetUserInfo)
-		api.GET("/path/list", controllers.GetPathList)
+		api.GET("/path/list", controllers.GetPathList)     // 目录列表
+		api.POST("/path/create", controllers.CreateDir)    // 创建目录接口
 		api.GET("/path/files", controllers.GetNetFileList) // 查询网盘文件列表
 		api.POST("/user/change", controllers.ChangePassword)
 		api.GET("/auth/115-status", controllers.Get115Status)             // 查询115状态
@@ -602,6 +602,8 @@ func initEnv() bool {
 	// 将版本写入helper
 	helpers.Version = Version
 	helpers.ReleaseDate = PublishDate
+	// 加载环境变量配置
+	helpers.LoadEnvFromFile(filepath.Join(helpers.RootDir, "config", ".env"))
 	if DEFAULT_SC_API_KEY != "" {
 		helpers.DEFAULT_SC_API_KEY = DEFAULT_SC_API_KEY
 	} else {
@@ -627,8 +629,6 @@ func initEnv() bool {
 	} else {
 		helpers.ENCRYPTION_KEY = os.Getenv("ENCRYPTION_KEY")
 	}
-	// 加载环境变量配置
-	helpers.LoadEnvFromFile(filepath.Join(helpers.RootDir, "config", ".env"))
 	initTimeZone()        // 设置东8区
 	getDataAndConfigDir() // 获取数据库数据目录和配置文件目录
 	log.Printf("当前工作目录:%s\n", helpers.RootDir)
