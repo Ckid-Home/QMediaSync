@@ -274,8 +274,9 @@ func getDataAndConfigDir() {
 		if appData == "" {
 			appData = os.Getenv("APPDATA")
 		}
-		dataDir = filepath.Join(helpers.RootDir, "postgres")  // 数据库目录
-		configDir = filepath.Join(appData, AppName, "config") // 配置目录
+		dataDir = filepath.Join(helpers.RootDir, "postgres")      // 数据库目录
+		oldConfigDir := filepath.Join(appData, AppName, "config") // 配置目录
+		configDir = filepath.Join(helpers.RootDir, "config")      // 配置目录
 		err := os.MkdirAll(dataDir, 0755)
 		if err != nil {
 			fmt.Printf("创建数据目录失败: %v\n", err)
@@ -288,6 +289,20 @@ func getDataAndConfigDir() {
 		}
 		helpers.DataDir = dataDir
 		helpers.ConfigDir = configDir
+		if helpers.PathExists(oldConfigDir) {
+			// 迁移旧配置
+			err := helpers.MoveDir(oldConfigDir, configDir)
+			if err != nil {
+				fmt.Printf("迁移旧配置目录失败: %v\n", err)
+				panic("迁移旧配置目录失败")
+			}
+			// 删除旧目录
+			err = os.RemoveAll(oldConfigDir)
+			if err != nil {
+				fmt.Printf("删除旧配置目录失败: %v\n", err)
+				panic("删除旧配置目录失败")
+			}
+		}
 	} else {
 		if os.Getenv("TRIM_PKGETC") == "" {
 			appData = helpers.RootDir
@@ -440,6 +455,8 @@ func setRouter(r *gin.Engine) {
 	r.GET("/api/logs/old", controllers.GetOldLogs)                       // HTTP获取旧日志
 	r.GET("/api/logs/download", controllers.DownloadLogFile)             // 下载日志文件
 
+	r.POST("/path/update-fn-access-path", controllers.UpdateFNPath) // 更新Fn访问路径
+
 	api := r.Group("/api")
 	api.Use(controllers.JWTAuthMiddleware())
 	{
@@ -451,13 +468,18 @@ func setRouter(r *gin.Engine) {
 				"isRelease": helpers.IsRelease,
 			})
 		})
-		api.GET("/115/oauth-url", controllers.GetOAuthUrl)               // 获取115 OAuth登录地址
-		api.POST("115/oauth-confirm", controllers.ConfirmOAuthCode)      // 确认OAuth登录
-		api.GET("/115/queue/stats", controllers.GetQueueStats)           // 获取115 OpenAPI请求队列统计数据
-		api.POST("/115/queue/rate-limit", controllers.SetQueueRateLimit) // 设置115 OpenAPI请求队列速率限制
-		api.GET("/115/stats/daily", controllers.GetRequestStatsByDay)    // 获取115请求统计（按天）
-		api.GET("/115/stats/hourly", controllers.GetRequestStatsByHour)  // 获取115请求统计（按小时）
-		api.POST("/115/stats/clean", controllers.CleanOldRequestStats)   // 清理旧的请求统计数据
+		// api.GET("/announce", controllers.GetAnnounce) // 获取公告
+
+		api.POST("/auth/115-qrcode-open", controllers.GetLoginQrCodeOpen) // 获取115开放平台登录二维码
+		api.POST("/auth/115-qrcode-status", controllers.GetQrCodeStatus)  // 查询115二维码扫码状态
+		api.GET("/115/status", controllers.Get115Status)                  // 查询115状态
+		api.GET("/115/oauth-url", controllers.GetOAuthUrl)                // 获取115 OAuth登录地址
+		api.POST("115/oauth-confirm", controllers.ConfirmOAuthCode)       // 确认OAuth登录
+		api.GET("/115/queue/stats", controllers.GetQueueStats)            // 获取115 OpenAPI请求队列统计数据
+		api.POST("/115/queue/rate-limit", controllers.SetQueueRateLimit)  // 设置115 OpenAPI请求队列速率限制
+		api.GET("/115/stats/daily", controllers.GetRequestStatsByDay)     // 获取115请求统计（按天）
+		api.GET("/115/stats/hourly", controllers.GetRequestStatsByHour)   // 获取115请求统计（按小时）
+		api.POST("/115/stats/clean", controllers.CleanOldRequestStats)    // 清理旧的请求统计数据
 		// 百度网盘相关路由
 		api.GET("/baidupan/oauth-url", controllers.GetBaiDuPanOAuthUrl)           // 获取百度网盘OAuth登录地址
 		api.POST("/baidupan/oauth-confirm", controllers.ConfirmBaiDuPanOAuthCode) // 确认百度网盘OAuth登录
@@ -472,12 +494,10 @@ func setRouter(r *gin.Engine) {
 		api.POST("/path/create", controllers.CreateDir)    // 创建目录接口
 		api.GET("/path/files", controllers.GetNetFileList) // 查询网盘文件列表
 		api.POST("/user/change", controllers.ChangePassword)
-		api.GET("/auth/115-status", controllers.Get115Status)             // 查询115状态
-		api.POST("/auth/115-qrcode-open", controllers.GetLoginQrCodeOpen) // 获取115开放平台登录二维码
-		api.POST("/auth/115-qrcode-status", controllers.GetQrCodeStatus)  // 查询115二维码扫码状态
-		api.POST("/setting/http-proxy", controllers.UpdateHttpProxy)      // 更改HTTP代理
-		api.GET("/setting/http-proxy", controllers.GetHttpProxy)          // 获取HTTP代理
-		api.POST("/setting/test-http-proxy", controllers.TestHttpProxy)   // 测试HTTP代理
+
+		api.POST("/setting/http-proxy", controllers.UpdateHttpProxy)    // 更改HTTP代理
+		api.GET("/setting/http-proxy", controllers.GetHttpProxy)        // 获取HTTP代理
+		api.POST("/setting/test-http-proxy", controllers.TestHttpProxy) // 测试HTTP代理
 		// api.GET("/setting/telegram", controllers.GetTelegram)                                      // 获取telegram消息通知配置
 		// api.POST("/setting/telegram", controllers.UpdateTelegram)                                  // 更改telegram消息通知配置
 		// api.POST("/telegram/test", controllers.TestTelegram)                                       // 测试telegram连通性

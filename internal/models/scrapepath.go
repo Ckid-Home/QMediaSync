@@ -1,6 +1,7 @@
 package models
 
 import (
+	"Q115-STRM/internal/baidupan"
 	"Q115-STRM/internal/db"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/openai"
@@ -91,6 +92,7 @@ type ScrapePath struct {
 	IsScraping            bool                         `json:"is_scraping" form:"is_scraping"`                           // 是否正在刮削
 	MaxThreads            int                          `json:"max_threads" form:"max_threads"`                           // 刮削最大线程数，默认值为5
 	V115Client            *v115open.OpenClient         `json:"-" gorm:"-"`                                               // 115客户端
+	BaiduPanClient        *baidupan.Client             `json:"-" gorm:"-"`                                               // 百度网盘客户端
 	OpenListClient        *openlist.Client             `json:"-" gorm:"-"`                                               // openlist客户端
 	ExistsFiles           map[string]bool              `json:"-" gorm:"-"`                                               // 已存在的文件，key为文件路径，value为是否存在
 	ScrapeRootPath        string                       `json:"-" gorm:"-"`                                               // 刮削根路径
@@ -500,6 +502,19 @@ func (sp *ScrapePath) GenerateCategory() {
 			fileId = filepath.Join(sp.DestPathId, category.Name)
 			os.MkdirAll(fileId, 0777)
 		case SourceType123:
+		case SourceTypeBaiduPan:
+			fileId = sp.DestPathId + "/" + category.Name
+			// 先查询是否存在
+			exists, _ := sp.BaiduPanClient.PathExists(context.Background(), fileId)
+			if !exists {
+				err = sp.BaiduPanClient.Mkdir(context.Background(), fileId)
+				if err != nil {
+					helpers.AppLogger.Errorf("创建百度网盘目录失败: %v", err)
+					continue
+				}
+			} else {
+				helpers.AppLogger.Infof("百度网盘目录 %s 已存在", fileId)
+			}
 		}
 		if fileId == "" {
 			helpers.AppLogger.Errorf("创建二级分类=%s 目录失败", category.Name)

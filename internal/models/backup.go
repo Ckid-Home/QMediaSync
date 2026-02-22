@@ -9,9 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -382,22 +380,32 @@ func (s *BackupService) RestoreBackup(ctx context.Context, recordID uint, upload
 	}
 
 	helpers.AppLogger.Infof("开始恢复数据，备份文件: %s", filePath)
-
-	_, err := s.CreateBackup(ctx, BackupTypeManual, "恢复前自动备份")
-	if err != nil {
-		helpers.AppLogger.Warnf("创建恢复前备份失败: %v", err)
-	}
+	var err error
+	// _, err := s.CreateBackup(ctx, BackupTypeManual, "恢复前自动备份")
+	// if err != nil {
+	// 	helpers.AppLogger.Warnf("创建恢复前备份失败: %v", err)
+	// } else {
+	// 	helpers.AppLogger.Infof("恢复前备份创建成功，备份记录ID: %d", record.ID)
+	// }
 
 	if err := s.pauseAllQueues(); err != nil {
 		helpers.AppLogger.Warnf("暂停队列时出现警告: %v", err)
+	} else {
+		helpers.AppLogger.Infof("同步和刮削队列暂停成功")
 	}
 	defer s.resumeAllQueues()
 
 	var sqlContent []byte
 	if strings.HasSuffix(filePath, ".zip") {
 		sqlContent, err = s.readCompressedFile(filePath)
+		if err == nil {
+			helpers.AppLogger.Infof("压缩备份文件读取成功，大小: %d 字节", len(sqlContent))
+		}
 	} else {
 		sqlContent, err = os.ReadFile(filePath)
+		if err == nil {
+			helpers.AppLogger.Infof("非压缩备份文件读取成功，大小: %d 字节", len(sqlContent))
+		}
 	}
 
 	if err != nil {
@@ -408,6 +416,8 @@ func (s *BackupService) RestoreBackup(ctx context.Context, recordID uint, upload
 	if err := s.executeRestoreSQL(ctx, string(sqlContent)); err != nil {
 		s.updateRecordFailure(record, fmt.Sprintf("执行恢复SQL失败: %v", err))
 		return fmt.Errorf("执行恢复SQL失败: %v", err)
+	} else {
+		helpers.AppLogger.Infof("恢复SQL执行成功")
 	}
 
 	record.Status = BackupStatusCompleted
@@ -589,13 +599,6 @@ func (s *BackupService) escapeSQLString(str string) string {
 }
 
 func (s *BackupService) executeRestoreSQL(ctx context.Context, sqlContent string) error {
-	if helpers.GlobalConfig.Db.Engine == helpers.DbEnginePostgres {
-		return s.executePostgresRestore(ctx, sqlContent)
-	}
-	return s.executeSqliteRestore(ctx, sqlContent)
-}
-
-func (s *BackupService) executePostgresRestore(ctx context.Context, sqlContent string) error {
 	statements := s.splitSQLStatements(sqlContent)
 
 	for _, stmt := range statements {
@@ -611,35 +614,12 @@ func (s *BackupService) executePostgresRestore(ctx context.Context, sqlContent s
 		}
 
 		if err := db.Db.Exec(stmt).Error; err != nil {
-			if !strings.Contains(err.Error(), "already exists") &&
-				!strings.Contains(err.Error(), "does not exist") {
+			errMsg := err.Error()
+			if !strings.Contains(errMsg, "already exists") &&
+				!strings.Contains(errMsg, "does not exist") {
 				helpers.AppLogger.Warnf("执行SQL语句失败: %v, 语句: %s", err, stmt[:min(100, len(stmt))])
 			}
 		}
-	}
-
-	return nil
-}
-
-func (s *BackupService) executeSqliteRestore(ctx context.Context, sqlContent string) error {
-	tempFile := filepath.Join(s.backupDir, "restore_temp.sql")
-	if err := os.WriteFile(tempFile, []byte(sqlContent), 0644); err != nil {
-		return fmt.Errorf("写入临时SQL文件失败: %v", err)
-	}
-	defer os.Remove(tempFile)
-
-	sqliteFile := filepath.Join(helpers.ConfigDir, helpers.GlobalConfig.Db.SqliteFile)
-
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "sqlite3", sqliteFile, ".read "+tempFile)
-	} else {
-		cmd = exec.CommandContext(ctx, "sqlite3", sqliteFile, ".read", tempFile)
-	}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("执行sqlite3恢复失败: %v, 输出: %s", err, string(output))
 	}
 
 	return nil

@@ -528,6 +528,10 @@ func ToggleSyncByPath(c *gin.Context) {
 		return
 	}
 	syncPath.ToggleCron()
+	// 重启自定义定时任务
+	if syncPath.Cron != "" {
+		synccron.InitSyncCron()
+	}
 	if syncPath.EnableCron {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "定时同步已开启", Data: nil})
 	} else {

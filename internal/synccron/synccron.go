@@ -107,7 +107,8 @@ func RefreshOAuthAccessToken() {
 			// 更新其他客户端的token
 			v115open.UpdateToken(account.ID, tokenData.AccessToken, tokenData.RefreshToken)
 			// 刷新成功，更新账号的token
-			helpers.AppLogger.Infof("刷新115账号token成功，账号ID: %d, 新到期时间: %s", account.ID, time.Unix(tokenData.ExpiresIn, 0).Format("2006-01-02 15:04:05"))
+			helpers.AppLogger.Infof("刷新115账号token成功，账号ID: %d, 新到期时间: %d => %s", account.ID, tokenData.ExpiresIn, time.Unix(account.TokenExpiriesTime, 0).Format("2006-01-02 15:04:05"))
+			continue
 		}
 		if account.SourceType == models.SourceTypeBaiduPan {
 			// 刷新百度网盘的访问凭证
@@ -144,7 +145,7 @@ func RefreshOAuthAccessToken() {
 			// 更新其他客户端的token
 			baidupan.UpdateToken(account.ID, resp.AccessToken)
 			// 刷新成功，更新账号的token
-			helpers.AppLogger.Infof("刷新百度网盘账号token成功，账号ID: %d, 新到期时间: %s", account.ID, time.Unix(resp.ExpiresIn, 0).Format("2006-01-02 15:04:05"))
+			helpers.AppLogger.Infof("刷新百度网盘账号token成功，账号ID: %d, 新到期时间: %d => %s", account.ID, resp.ExpiresIn, time.Unix(resp.ExpiresIn, 0).Format("2006-01-02 15:04:05"))
 			continue
 		}
 	}

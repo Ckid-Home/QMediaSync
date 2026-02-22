@@ -49,7 +49,7 @@ func GetPathList(c *gin.Context) {
 	}
 	var req dirListReq
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
 		return
 	}
 	var pathes []DirResp
@@ -82,80 +82,82 @@ func GetPathList(c *gin.Context) {
 func GetLocalPath(parentPath string) ([]DirResp, error) {
 	pathes := make([]DirResp, 0)
 	// windows
-	if runtime.GOOS == "windows" {
-		helpers.AppLogger.Infof("parentPath: %s", parentPath)
-		if parentPath == "" {
-			// 获取盘符列表
-			partitions, err := disk.Partitions(false)
-			helpers.AppLogger.Infof("partitions: %+v", partitions)
-			if err != nil {
-				helpers.AppLogger.Errorf("获取盘符失败：%v", err)
-				return nil, err
-			}
-			for _, partition := range partitions {
-				// helpers.AppLogger.Debugf("盘符: %s", partition.Mountpoint)
-				pathes = append(pathes, DirResp{
-					Id:   partition.Mountpoint + "\\",
-					Name: partition.Mountpoint,
-					Path: partition.Mountpoint + "\\",
-				})
-			}
-			return pathes, nil
-		}
-	} else {
-		if parentPath == "" {
-			// 如果是飞牛环境下，使用环境变量来获取有权限的目录
-			if os.Getenv("TRIM_DATA_ACCESSIBLE_PATHS") != "" {
-				helpers.AccessiblePaths = os.Getenv("TRIM_DATA_ACCESSIBLE_PATHS")
-			}
-			if os.Getenv("TRIM_DATA_SHARE_PATHS") != "" {
-				helpers.ShareDirs = os.Getenv("TRIM_DATA_SHARE_PATHS")
-			}
-			helpers.AppLogger.Infof("AccessiblePaths: %s", helpers.AccessiblePaths)
-			helpers.AppLogger.Infof("ShareDirs: %s", helpers.ShareDirs)
-			if helpers.AccessiblePaths != "" {
-				accessiblePaths := helpers.AccessiblePaths
-				sharePaths := helpers.ShareDirs
-				accessiblePaths = ":" + sharePaths
-				// 用冒号分割
-				paths := strings.Split(accessiblePaths, ":")
-				for _, path := range paths {
-					// 去掉首尾空格
-					path = strings.TrimSpace(path)
-					// 加入列表
+	if parentPath == "" {
+		if runtime.GOOS == "windows" {
+			helpers.AppLogger.Infof("parentPath: %s", parentPath)
+			if parentPath == "" {
+				// 获取盘符列表
+				partitions, err := disk.Partitions(false)
+				helpers.AppLogger.Infof("partitions: %+v", partitions)
+				if err != nil {
+					helpers.AppLogger.Errorf("获取盘符失败：%v", err)
+					return nil, err
+				}
+				for _, partition := range partitions {
+					// helpers.AppLogger.Debugf("盘符: %s", partition.Mountpoint)
 					pathes = append(pathes, DirResp{
-						Id:   path,
-						Name: filepath.Base(path),
-						Path: path,
+						Id:   partition.Mountpoint + "\\",
+						Name: partition.Mountpoint,
+						Path: partition.Mountpoint + "\\",
 					})
 				}
+				return pathes, nil
+			}
+		} else {
+			if helpers.IsFnOS {
+				// 如果是飞牛环境下，使用环境变量来获取有权限的目录
+				if helpers.AccessiblePaths == "" {
+					helpers.AccessiblePaths = os.Getenv("TRIM_DATA_ACCESSIBLE_PATHS")
+				}
+				if helpers.ShareDirs == "" {
+					helpers.ShareDirs = os.Getenv("TRIM_DATA_SHARE_PATHS")
+				}
+				helpers.AppLogger.Infof("AccessiblePaths: %s", helpers.AccessiblePaths)
+				helpers.AppLogger.Infof("ShareDirs: %s", helpers.ShareDirs)
+				if helpers.AccessiblePaths != "" || helpers.ShareDirs != "" {
+					accessiblePaths := helpers.AccessiblePaths
+					sharePaths := helpers.ShareDirs
+					accessiblePaths = ":" + sharePaths
+					// 用冒号分割
+					paths := strings.Split(accessiblePaths, ":")
+					for _, path := range paths {
+						// 去掉首尾空格
+						path = strings.TrimSpace(path)
+						// 加入列表
+						pathes = append(pathes, DirResp{
+							Id:   path,
+							Name: filepath.Base(path),
+							Path: path,
+						})
+					}
+				}
+				return pathes, nil
 			} else {
 				// 获取根目录/的子目录列表
 				parentPath = "/"
 			}
 		}
 	}
-	if (parentPath == "" && len(pathes) == 0) || runtime.GOOS == "windows" {
-		// 获取子目录列表
-		entries, err := os.ReadDir(parentPath)
-		if err != nil {
-			return nil, err
-		}
-		for _, entry := range entries {
-			if entry.IsDir() {
-				// 跳过隐藏目录
-				if strings.HasPrefix(entry.Name(), ".") {
-					continue
-				}
-				fullPath := filepath.Join(parentPath, entry.Name())
-				pathes = append(pathes, DirResp{
-					Id:   fullPath,
-					Name: entry.Name(),
-					Path: fullPath,
-				})
+	// 获取子目录列表
+	entries, err := os.ReadDir(parentPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// 跳过隐藏目录
+			if strings.HasPrefix(entry.Name(), ".") {
+				continue
 			}
+			fullPath := filepath.ToSlash(filepath.Join(parentPath, entry.Name()))
+			pathes = append(pathes, DirResp{
+				Id:   fullPath,
+				Name: entry.Name(),
+				Path: fullPath,
+			})
 		}
 	}
+
 	return pathes, nil
 }
 
@@ -230,7 +232,7 @@ func GetBaiduPanPathList(parentId string, accountId uint) ([]DirResp, error) {
 	}
 	client := account.GetBaiDuPanClient()
 	ctx := context.Background()
-	fileList, fileErr := client.GetFileList(ctx, parentId, 1, 0, 0, 100)
+	fileList, fileErr := client.GetFileList(ctx, parentId, 1, 1, 0, 1000)
 	if fileErr != nil {
 		helpers.AppLogger.Warnf("获取百度网盘目录列表失败: 父目录：%s, 错误:%v", parentId, fileErr)
 		return nil, fileErr
@@ -268,7 +270,7 @@ func GetNetFileList(c *gin.Context) {
 	}
 	var req dirListReq
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
 		return
 	}
 	if req.Page == 0 {
@@ -360,7 +362,7 @@ func get115Dirs(parentId string, account *models.Account, page, pageSize int) ([
 func getBaiduPanDirs(parentId string, account *models.Account, page, pageSize int) ([]*FileItem, error) {
 	client := account.GetBaiDuPanClient()
 	ctx := context.Background()
-	fileList, fileErr := client.GetFileList(ctx, parentId, 0, 0, int32((page-1)*pageSize), int32(pageSize))
+	fileList, fileErr := client.GetFileList(ctx, parentId, 0, 1, int32((page-1)*pageSize), int32(pageSize))
 	if fileErr != nil {
 		helpers.AppLogger.Warnf("获取百度网盘目录列表失败: 父目录：%s, 错误:%v", parentId, fileErr)
 		return nil, fileErr
@@ -391,21 +393,21 @@ func CreateDir(c *gin.Context) {
 	}
 	var req createDirReq
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
 		return
 	}
 	if req.Name == "" {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "文件夹名称不能为空", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "文件夹名称不能为空", Data: nil})
 		return
 	}
 	// 父目录不能为空
 	if req.ParentPath == "" || req.ParentId == "" {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "父目录不能为空", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "父目录不能为空", Data: nil})
 		return
 	}
 	// 文件夹名称不能包含/
 	if strings.Contains(req.Name, "/") {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "文件夹名称不能包含/", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "文件夹名称不能包含/", Data: nil})
 		return
 	}
 	var err error
@@ -498,9 +500,12 @@ func makeBaiduPanPathList(parentId string, folderName string, accountId uint) (s
 		return "", fmt.Errorf("获取账号失败: %v", err)
 	}
 	client := account.GetBaiDuPanClient()
-	_, err = client.GetFileList(context.Background(), parentId, 0, 1, 0, 1)
+	exists, err := client.PathExists(context.Background(), parentId)
 	if err != nil {
 		return "", fmt.Errorf("获取百度网盘目录失败，目录可能不存在: %v", err)
+	}
+	if !exists {
+		return "", fmt.Errorf("父目录不存在: %s", parentId)
 	}
 	// 创建新目录
 	newDir := filepath.ToSlash(filepath.Join(parentId, folderName))
@@ -509,4 +514,19 @@ func makeBaiduPanPathList(parentId string, folderName string, accountId uint) (s
 		return "", fmt.Errorf("创建百度网盘目录失败: %s, 错误: %v", newDir, err)
 	}
 	return newDir, nil
+}
+
+// 更新飞牛有权限的目录
+// 飞牛执行目录授权操作后，会触发该接口调用
+func UpdateFNPath(c *gin.Context) {
+	type updateFNPathReq struct {
+		Path string `json:"path"`
+	}
+	var req updateFNPathReq
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
+		return
+	}
+	helpers.AccessiblePaths = req.Path
+	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "更新目录成功", Data: nil})
 }

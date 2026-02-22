@@ -1,6 +1,7 @@
 package scrape
 
 import (
+	"Q115-STRM/internal/baidupan"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/openlist"
@@ -30,6 +31,7 @@ type ScrapeBase struct {
 	tmdbClient     *tmdb.Client
 	v115Client     *v115open.OpenClient
 	openlistClient *openlist.Client
+	baiduPanClient *baidupan.Client
 }
 
 // 下载图片到指定文件

@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -139,7 +140,8 @@ func (c *Client) handleError(err error, resp *http.Response, respData any) error
 	}
 	// 检查respData是否为空
 	if respData == nil {
-		return fmt.Errorf("百度SDK请求失败 错误: 响应数据为空")
+		helpers.BaiduPanLog.Errorf("百度SDK请求失败 错误: 响应数据为空")
+		return err
 	}
 	return nil
 }
@@ -172,11 +174,13 @@ func (c *Client) GetFileList(ctx context.Context, parentPath string, onlyDir int
 	if !strings.HasPrefix(parentPath, "/") {
 		parentPath = "/" + parentPath
 	}
-	resp, r, err := c.client.FileinfoApi.Xpanfilelist(ctx).AccessToken(c.accessToken).Dir(parentPath).Folder(onlyDirStr).Showempty(showEmby).Start(startStr).Limit(limit).Execute()
+	// 将所有\转为/
+	parentPath = filepath.ToSlash(parentPath)
+	resp, r, err := c.client.FileinfoApi.Xpanfilelist(ctx).AccessToken(c.accessToken).Web("1").Dir(parentPath).Folder(onlyDirStr).Showempty(showEmby).Start(startStr).Limit(limit).Execute()
 	// 统一处理错误
-	if c.handleError(err, r, resp) != nil {
-		helpers.AppLogger.Warnf("获取百度网盘目录列表失败: 父目录：%s, 错误:%v", parentPath, err)
-		return nil, err
+	if herr := c.handleError(err, r, resp); herr != nil {
+		helpers.AppLogger.Warnf("获取百度网盘目录列表失败，目录：%s, 错误:%v", parentPath, herr)
+		return nil, herr
 	}
 	// 记录日志
 	// 解码resp
@@ -198,6 +202,8 @@ func (c *Client) GetAllFiles(ctx context.Context, parentPath string, start int, 
 	if !strings.HasPrefix(parentPath, "/") {
 		parentPath = "/" + parentPath
 	}
+	// 将所有\转为/
+	parentPath = filepath.ToSlash(parentPath)
 	req := c.client.MultimediafileApi.Xpanfilelistall(ctx).AccessToken(c.accessToken).Recursion(int32(1)).Path(parentPath).Start(int32(start)).Limit(int32(limit))
 	if mtime > 0 {
 		req = req.Mtime(fmt.Sprintf("%d", mtime))
@@ -254,19 +260,30 @@ func (c *Client) Mkdir(ctx context.Context, path string) error {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
-	resp, r, err := c.client.FileuploadApi.Xpanfilecreate(ctx).AccessToken(c.accessToken).Path(path).Isdir(1).Path(path).Rtype(0).Execute()
+	// 将所有\转为/
+	path = filepath.ToSlash(path)
+	resp, r, err := c.client.FileuploadApi.Xpanfilecreate(ctx).AccessToken(c.accessToken).Isdir(1).Path(path).Rtype(0).Execute()
 	// 统一处理错误
 	return c.handleError(err, r, resp)
 }
 
 func (c *Client) Del(ctx context.Context, pathes []string) error {
 	// 将pathes做json
-	fileList, err := json.Marshal(pathes)
+	newPathes := make([]string, 0)
+	for _, path := range pathes {
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+		// 将所有\转为/
+		path = filepath.ToSlash(path)
+		newPathes = append(newPathes, path)
+	}
+	fileList, err := json.Marshal(newPathes)
 	if err != nil {
 		return err
 	}
 	fileListStr := string(fileList)
-	r, err := c.client.FilemanagerApi.Filemanagerdelete(ctx).AccessToken(c.accessToken).Filelist(fileListStr).Execute()
+	r, err := c.client.FilemanagerApi.Filemanagerdelete(ctx).AccessToken(c.accessToken).Async(0).Filelist(fileListStr).Execute()
 	// 统一处理错误
 	return c.handleError(err, r, nil)
 }
@@ -356,4 +373,203 @@ func (c *Client) Upload(ctx context.Context, localPath string, remotePath string
 		return nil, fmt.Errorf("创建文件失败：%w", err)
 	}
 	return &resp, nil
+}
+
+// 路径是否存在
+func (c *Client) PathExists(ctx context.Context, path string) (bool, error) {
+	if path == "" {
+		return false, fmt.Errorf("路径不能为空")
+	}
+	_, err := c.GetFileList(ctx, path, 0, 1, 0, 1)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// 查询文件是否存在
+func (c *Client) FileExists(ctx context.Context, path string) (*FileInfo, error) {
+	if path == "" {
+		return nil, fmt.Errorf("路径不能为空")
+	}
+	// 查询文件所在文件夹的列表，看文件是否存在
+	parentPath := filepath.ToSlash(filepath.Dir(path))
+	fileName := filepath.Base(path)
+	start := 0
+	for {
+		fsList, err := c.GetFileList(ctx, parentPath, 0, 1, int32(start), 1000)
+		if err != nil {
+			return nil, err
+		}
+		for _, file := range fsList {
+			if file.ServerFilename == fileName {
+				return file, nil
+			}
+		}
+		if len(fsList) < 1000 {
+			break
+		}
+		start += 1000
+	}
+	return nil, nil
+}
+
+type ReNameItem struct {
+	Path    string `json:"path"`
+	NewName string `json:"newname"`
+}
+
+type MoveOrCopyItem struct {
+	Path    string `json:"path"`
+	Dest    string `json:"dest"`
+	NewName string `json:"newname"`
+}
+
+// 重命名
+// path: 包含文件名的完整路径
+// newName: 新文件名
+func (c *Client) Rename(ctx context.Context, path string, newName string) error {
+	if path == "" {
+		return fmt.Errorf("路径不能为空")
+	}
+	if newName == "" {
+		return fmt.Errorf("旧文件名不能为空")
+	}
+	// 提取旧名字
+	oldName := filepath.Base(path)
+	if oldName == newName {
+		return nil
+	}
+	// 构建请求参数
+	fileList := []ReNameItem{
+		{
+			Path:    path,
+			NewName: newName,
+		},
+	}
+	fileListStr, err := json.Marshal(fileList)
+	if err != nil {
+		return fmt.Errorf("对fileList做json失败: %w", err)
+	}
+
+	r, err := c.client.FilemanagerApi.Filemanagerrename(ctx).AccessToken(c.accessToken).Async(0).Ondup("skip").Filelist(string(fileListStr)).Execute()
+	// 统一处理错误
+	return c.handleError(err, r, nil)
+}
+
+// 批量重命名
+func (c *Client) RenameBatch(ctx context.Context, fileList []ReNameItem) error {
+	if len(fileList) == 0 {
+		return fmt.Errorf("文件列表不能为空")
+	}
+	fileListStr, err := json.Marshal(fileList)
+	if err != nil {
+		return fmt.Errorf("对fileList做json失败: %w", err)
+	}
+
+	r, err := c.client.FilemanagerApi.Filemanagerrename(ctx).AccessToken(c.accessToken).Async(0).Ondup("skip").Filelist(string(fileListStr)).Execute()
+	// 统一处理错误
+	return c.handleError(err, r, nil)
+}
+
+// 移动
+// 如果newName不等于旧文件名，则会移动+改名
+// path: 包含文件名的完整路径
+// newPath: 新路径，不包含文件名
+func (c *Client) Move(ctx context.Context, path string, newPath string, newName string) error {
+	if path == "" {
+		return fmt.Errorf("路径不能为空")
+	}
+	if newName == "" {
+		return fmt.Errorf("旧文件名不能为空")
+	}
+	// 提取旧名字
+	oldName := filepath.Base(path)
+	if oldName == newName {
+		return nil
+	}
+	// 构建请求参数
+	fileList := []MoveOrCopyItem{
+		{
+			Path:    path,
+			Dest:    newPath,
+			NewName: newName,
+		},
+	}
+	fileListStr, err := json.Marshal(fileList)
+	if err != nil {
+		return fmt.Errorf("对fileList做json失败: %w", err)
+	}
+
+	resp, rerr := c.client.FilemanagerApi.Filemanagermove(ctx).AccessToken(c.accessToken).Async(0).Ondup("skip").Filelist(string(fileListStr)).Execute()
+	return c.handleError(rerr, resp, nil)
+}
+
+// 批量移动
+func (c *Client) MoveBatch(ctx context.Context, fileList []MoveOrCopyItem) error {
+	if len(fileList) == 0 {
+		return fmt.Errorf("文件列表不能为空")
+	}
+	newFileList := make([]MoveOrCopyItem, 0)
+	// 检查fileList，如果path和dest不以/开头，则在开头添加/
+	for _, item := range fileList {
+		if !strings.HasPrefix(item.Path, "/") {
+			item.Path = "/" + item.Path
+		}
+		if !strings.HasPrefix(item.Dest, "/") {
+			item.Dest = "/" + item.Dest
+		}
+		newFileList = append(newFileList, item)
+	}
+	fileListStr, err := json.Marshal(newFileList)
+	if err != nil {
+		return fmt.Errorf("对fileList做json失败: %w", err)
+	}
+	helpers.BaiduPanLog.Debugf("移动文件列表: %s", string(fileListStr))
+
+	resp, rerr := c.client.FilemanagerApi.Filemanagermove(ctx).AccessToken(c.accessToken).Async(0).Ondup("skip").Filelist(string(fileListStr)).Execute()
+	return c.handleError(rerr, resp, nil)
+}
+
+// 复制
+// path: 包含文件名的完整路径
+// newPath: 新路径，不包含文件名
+func (c *Client) Copy(ctx context.Context, path string, newPath string) error {
+	if path == "" {
+		return fmt.Errorf("路径不能为空")
+	}
+	if newPath == "" {
+		return fmt.Errorf("新路径不能为空")
+	}
+	// 提取旧名字
+	oldName := filepath.Base(path)
+	// 构建请求参数
+	fileList := []MoveOrCopyItem{
+		{
+			Path:    path,
+			Dest:    newPath,
+			NewName: oldName,
+		},
+	}
+	fileListStr, err := json.Marshal(fileList)
+	if err != nil {
+		return fmt.Errorf("对fileList做json失败: %w", err)
+	}
+
+	resp, rerr := c.client.FilemanagerApi.Filemanagercopy(ctx).AccessToken(c.accessToken).Async(0).Ondup("skip").Filelist(string(fileListStr)).Execute()
+	return c.handleError(rerr, resp, nil)
+}
+
+// 批量复制
+func (c *Client) CopyBatch(ctx context.Context, fileList []MoveOrCopyItem) error {
+	if len(fileList) == 0 {
+		return fmt.Errorf("文件列表不能为空")
+	}
+	fileListStr, err := json.Marshal(fileList)
+	if err != nil {
+		return fmt.Errorf("对fileList做json失败: %w", err)
+	}
+
+	resp, rerr := c.client.FilemanagerApi.Filemanagercopy(ctx).AccessToken(c.accessToken).Async(0).Ondup("skip").Filelist(string(fileListStr)).Execute()
+	return c.handleError(rerr, resp, nil)
 }

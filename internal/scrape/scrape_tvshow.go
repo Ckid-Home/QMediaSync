@@ -1,6 +1,7 @@
 package scrape
 
 import (
+	"Q115-STRM/internal/baidupan"
 	"Q115-STRM/internal/db"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
@@ -28,7 +29,7 @@ type tvshowTask struct {
 	seasons   []uint
 }
 
-func NewTvShowScrapeImpl(scrapePath *models.ScrapePath, ctx context.Context, v115Client *v115open.OpenClient, openlistClient *openlist.Client) scrapeImpl {
+func NewTvShowScrapeImpl(scrapePath *models.ScrapePath, ctx context.Context, v115Client *v115open.OpenClient, openlistClient *openlist.Client, baiduPanClient *baidupan.Client) scrapeImpl {
 	tmdbImpl := NewTmdbTvShowImpl(scrapePath, ctx)
 	return &tvShowScrapeImpl{
 		ScrapeBase: ScrapeBase{
@@ -36,9 +37,10 @@ func NewTvShowScrapeImpl(scrapePath *models.ScrapePath, ctx context.Context, v11
 			ctx:            ctx,
 			identifyImpl:   NewIdTvShowImpl(scrapePath, ctx, tmdbImpl),
 			categoryImpl:   NewCategoryTvShowImpl(scrapePath),
-			renameImpl:     NewRenameTvShowImpl(scrapePath, ctx, v115Client, openlistClient),
+			renameImpl:     NewRenameTvShowImpl(scrapePath, ctx, v115Client, openlistClient, baiduPanClient),
 			tmdbClient:     tmdbImpl.Client,
 			v115Client:     v115Client,
+			baiduPanClient: baiduPanClient,
 			openlistClient: openlistClient,
 		},
 	}

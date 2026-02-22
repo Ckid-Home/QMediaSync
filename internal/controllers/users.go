@@ -33,13 +33,13 @@ func LoginAction(c *gin.Context) {
 	user := &models.User{}
 	var req LoginRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: fmt.Sprintf("参数错误：%v", err), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: fmt.Sprintf("参数错误：%v", err), Data: nil})
 		return
 	}
 	username := req.Username
 	password := req.Password
 	if username == "" || password == "" {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "用户名或密码不能为空", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "用户名或密码不能为空", Data: nil})
 		return
 	}
 
@@ -94,11 +94,11 @@ func ChangePassword(c *gin.Context) {
 		NewPassword string `json:"new_password" form:"new_password"`
 	}
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: fmt.Sprintf("参数错误：%v", err), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: fmt.Sprintf("参数错误：%v", err), Data: nil})
 		return
 	}
 	if req.Username == "" {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "用户名不能为空", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "用户名不能为空", Data: nil})
 		return
 	}
 	isChange := false

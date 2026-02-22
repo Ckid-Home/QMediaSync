@@ -107,11 +107,11 @@ func GetTmdbSettings(c *gin.Context) {
 func SaveTmdbSettings(c *gin.Context) {
 	reqData := TmdbSettings{}
 	if err := c.ShouldBindJSON(&reqData); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	if err := models.GlobalScrapeSettings.SaveTmdb(reqData.TmdbApiKey, reqData.TmdbAccessToken, reqData.TmdbUrl, reqData.TmdbImageUrl, reqData.TmdbLanguage, reqData.TmdbImageLanguage, reqData.TmdbEnableProxy); err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "保存TMDB设置成功", Data: nil})
@@ -135,7 +135,7 @@ func SaveTmdbSettings(c *gin.Context) {
 func TestTmdbSettings(c *gin.Context) {
 	reqData := TmdbSettings{}
 	if err := c.ShouldBindJSON(&reqData); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	tmpScrapeSetting := &models.ScrapeSettings{
@@ -170,11 +170,11 @@ func TestTmdbSettings(c *gin.Context) {
 func SaveAiSettings(c *gin.Context) {
 	reqData := AiSettings{}
 	if err := c.ShouldBindJSON(&reqData); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	if err := models.GlobalScrapeSettings.SaveAi(reqData.AiApiKey, reqData.AiBaseUrl, reqData.AiModelName, reqData.AiTimeout); err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "保存AI识别设置成功", Data: nil})
@@ -197,11 +197,11 @@ func SaveAiSettings(c *gin.Context) {
 func TestAiSettings(c *gin.Context) {
 	reqData := AiSettings{}
 	if err := c.ShouldBindJSON(&reqData); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	if reqData.AiApiKey == "" || reqData.AiBaseUrl == "" || reqData.AiModelName == "" {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "必须配置API Key、接口地址模型名称", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "必须配置API Key、接口地址模型名称", Data: nil})
 		return
 	}
 	tmpScrapeSetting := &models.ScrapeSettings{
@@ -352,7 +352,7 @@ func GetTvshowCategories(c *gin.Context) {
 func SaveMovieCategory(c *gin.Context) {
 	reqData := MovieCategoryReq{}
 	if err := c.ShouldBindJSON(&reqData); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	movieCategory := &models.MovieCategory{
@@ -386,7 +386,7 @@ func SaveMovieCategory(c *gin.Context) {
 func SaveTvshowCategory(c *gin.Context) {
 	reqData := TvshowCategoryReq{}
 	if err := c.ShouldBindJSON(&reqData); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	tvshowCategory := &models.TvShowCategory{
@@ -439,7 +439,7 @@ func DeleteMovieCategory(c *gin.Context) {
 func DeleteTvshowCategory(c *gin.Context) {
 	id := helpers.StringToInt(c.Param("id"))
 	if err := models.DeleteTvshowCategory(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "删除电视剧分类成功", Data: nil})
@@ -508,7 +508,7 @@ func GetScrapePath(c *gin.Context) {
 func SaveScrapePath(c *gin.Context) {
 	reqData := models.ScrapePath{}
 	if err := c.ShouldBindJSON(&reqData); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	// 如果是115，用ID查询实际的目录
@@ -582,7 +582,7 @@ func ScanScrapePath(c *gin.Context) {
 	}
 	reqData := ScanScrapePathReq{}
 	if err := c.ShouldBindJSON(&reqData); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: err.Error(), Data: nil})
 		return
 	}
 	// 查询ScrapePath
@@ -696,8 +696,8 @@ func GetScrapeRecords(c *gin.Context) {
 			sourcePath = scrapeMedia.GetRemoteFullSeasonPath()
 			destPath = scrapeMedia.GetDestFullSeasonPath()
 		}
-		sourcePath = filepath.Join(sourcePath, scrapeMedia.VideoFilename)
-		destPath = filepath.Join(destPath, scrapeMedia.NewVideoBaseName+scrapeMedia.VideoExt)
+		sourcePath = filepath.ToSlash(filepath.Join(sourcePath, scrapeMedia.VideoFilename))
+		destPath = filepath.ToSlash(filepath.Join(destPath, scrapeMedia.NewVideoBaseName+scrapeMedia.VideoExt))
 
 		resp.List[i] = &scrapeMediaResp{
 			Type:            string(scrapeMedia.MediaType),
@@ -710,7 +710,7 @@ func GetScrapeRecords(c *gin.Context) {
 			EpisodeNumber:   scrapeMedia.EpisodeNumber,
 			Status:          string(scrapeMedia.Status),
 			TmdbID:          scrapeMedia.TmdbId,
-			NewPath:         filepath.Join(scrapeMedia.CategoryName, scrapeMedia.NewPathName),
+			NewPath:         filepath.ToSlash(filepath.Join(scrapeMedia.CategoryName, scrapeMedia.NewPathName)),
 			NewFile:         scrapeMedia.NewVideoBaseName + scrapeMedia.VideoExt,
 			Resolution:      scrapeMedia.Resolution,
 			ResolutionLevel: scrapeMedia.ResolutionLevel,
@@ -736,7 +736,7 @@ func GetScrapeRecords(c *gin.Context) {
 			if scrapeMedia.MediaEpisode != nil {
 				resp.List[i].EpisodeName = scrapeMedia.MediaEpisode.EpisodeName
 			}
-			resp.List[i].NewPath = filepath.Join(resp.List[i].NewPath, scrapeMedia.NewSeasonPathName)
+			resp.List[i].NewPath = filepath.ToSlash(filepath.Join(resp.List[i].NewPath, scrapeMedia.NewSeasonPathName))
 		}
 		if scrapePath.IsScraping && slices.Contains([]models.ScrapeMediaStatus{models.ScrapeMediaStatusScanned, models.ScrapeMediaStatusScraping}, scrapeMedia.Status) {
 			resp.List[i].PathIsScraping = scrapePath.IsScraping
@@ -827,7 +827,7 @@ func ScrapeTmpImage(c *gin.Context) {
 func ExportScrapeRecords(c *gin.Context) {
 	ids := c.Query("ids")
 	if ids == "" {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "请选择要导出的记录", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "请选择要导出的记录", Data: nil})
 		return
 	}
 	// ids用,分隔
@@ -904,7 +904,7 @@ func ReScrape(c *gin.Context) {
 	}
 	var req reScrapeReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "请求参数错误: " + err.Error(), Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "请求参数错误: " + err.Error(), Data: nil})
 		return
 	}
 	// 使用ID查询ScrapeMediaFile
@@ -992,7 +992,7 @@ func FinishScrapeMediaFile(c *gin.Context) {
 func DeleteScrapeMediaFile(c *gin.Context) {
 	ids := c.Query("ids")
 	if ids == "" {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "请选择要导出的记录", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "请选择要导出的记录", Data: nil})
 		return
 	}
 	// ids用,分隔
@@ -1027,7 +1027,7 @@ func DeleteScrapeMediaFile(c *gin.Context) {
 func RenameFailedScrapeMediaFile(c *gin.Context) {
 	ids := c.Query("ids")
 	if ids == "" {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "请选择要导出的记录", Data: nil})
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "请选择要导出的记录", Data: nil})
 		return
 	}
 	// ids用,分隔

@@ -1,6 +1,7 @@
 package scrape
 
 import (
+	"Q115-STRM/internal/baidupan"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/openlist"
@@ -18,13 +19,15 @@ type renameMovieImpl struct {
 	renameImpl renameImpl
 }
 
-func NewRenameMovieImpl(scrapePath *models.ScrapePath, ctx context.Context, v115Client *v115open.OpenClient, openlistClient *openlist.Client) renameImpl {
+func NewRenameMovieImpl(scrapePath *models.ScrapePath, ctx context.Context, v115Client *v115open.OpenClient, openlistClient *openlist.Client, baiduPanClient *baidupan.Client) renameImpl {
 	var ri renameImpl
 	switch scrapePath.SourceType {
 	case models.SourceType115:
 		ri = rename.NewRename115(ctx, scrapePath, v115Client)
 	case models.SourceTypeOpenList:
 		ri = rename.NewRenameOpenList(ctx, scrapePath, openlistClient)
+	case models.SourceTypeBaiduPan:
+		ri = rename.NewRenameBaiduPan(ctx, scrapePath, baiduPanClient)
 	default:
 		ri = rename.NewRenameLocal(ctx, scrapePath)
 	}

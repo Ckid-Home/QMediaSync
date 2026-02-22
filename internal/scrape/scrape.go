@@ -1,6 +1,7 @@
 package scrape
 
 import (
+	"Q115-STRM/internal/baidupan"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/openlist"
@@ -71,6 +72,7 @@ type Scrape struct {
 	ctxCancel      context.CancelFunc // 用来取消任务
 	V115Client     *v115open.OpenClient
 	OpenlistClient *openlist.Client
+	BaiduPanClient *baidupan.Client
 }
 
 // scrapePath 要刮削的目录
@@ -98,6 +100,8 @@ func (s *Scrape) initOpenClient() error {
 		s.V115Client = account.Get115Client()
 	case models.SourceTypeOpenList:
 		s.OpenlistClient = account.GetOpenListClient()
+	case models.SourceTypeBaiduPan:
+		s.BaiduPanClient = account.GetBaiDuPanClient()
 	}
 	return nil
 }
@@ -132,12 +136,14 @@ func (s *Scrape) init() {
 		s.scanImpl = scan.New115ScanImpl(s.scrapePath, s.V115Client, s.ctx)
 	case models.SourceTypeOpenList:
 		s.scanImpl = scan.NewOpenlistScanImpl(s.scrapePath, s.OpenlistClient, s.ctx)
+	case models.SourceTypeBaiduPan:
+		s.scanImpl = scan.NewBaiduPanScanImpl(s.scrapePath, s.BaiduPanClient, s.ctx)
 	}
 	// 确定扫描接口，识别接口，刮削接口，重命名接口
 	if s.scrapePath.MediaType == models.MediaTypeTvShow {
-		s.scrapeImpl = NewTvShowScrapeImpl(s.scrapePath, s.ctx, s.V115Client, s.OpenlistClient)
+		s.scrapeImpl = NewTvShowScrapeImpl(s.scrapePath, s.ctx, s.V115Client, s.OpenlistClient, s.BaiduPanClient)
 	} else {
-		s.scrapeImpl = NewMovieScrapeImpl(s.scrapePath, s.ctx, s.V115Client, s.OpenlistClient)
+		s.scrapeImpl = NewMovieScrapeImpl(s.scrapePath, s.ctx, s.V115Client, s.OpenlistClient, s.BaiduPanClient)
 	}
 }
 
@@ -167,6 +173,7 @@ func (s *Scrape) Start() bool {
 	// 先生成所有二级分类
 	s.scrapePath.V115Client = s.V115Client
 	s.scrapePath.OpenListClient = s.OpenlistClient
+	s.scrapePath.BaiduPanClient = s.BaiduPanClient
 	s.scrapePath.GenerateCategory()
 	// 获取视频文件列表并从文件名中提取媒体信息用来刮削
 	eerr := s.scanImpl.GetNetFileFiles()

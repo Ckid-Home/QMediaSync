@@ -18,7 +18,6 @@ import (
 )
 
 type v115StatusResp struct {
-	LoggedIn    bool        `json:"logged_in"`
 	UserId      json.Number `json:"user_id"`
 	Username    string      `json:"username"`
 	UsedSpace   int64       `json:"used_space"`
@@ -98,7 +97,6 @@ func Get115Status(c *gin.Context) {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取115用户信息失败: " + err.Error(), Data: nil})
 		return
 	}
-	resp.LoggedIn = true
 	resp.UserId = userInfo.UserId
 	resp.Username = userInfo.UserName
 	resp.UsedSpace = userInfo.RtSpaceInfo.AllUse.Size

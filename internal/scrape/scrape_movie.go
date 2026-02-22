@@ -1,6 +1,7 @@
 package scrape
 
 import (
+	"Q115-STRM/internal/baidupan"
 	"Q115-STRM/internal/db"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
@@ -22,7 +23,7 @@ type movieScrapeImpl struct {
 	ScrapeBase
 }
 
-func NewMovieScrapeImpl(scrapePath *models.ScrapePath, ctx context.Context, v115Client *v115open.OpenClient, openlistClient *openlist.Client) scrapeImpl {
+func NewMovieScrapeImpl(scrapePath *models.ScrapePath, ctx context.Context, v115Client *v115open.OpenClient, openlistClient *openlist.Client, baiduPanClient *baidupan.Client) scrapeImpl {
 	tmdbImpl := NewTmdbMovieImpl(scrapePath, ctx)
 	return &movieScrapeImpl{
 		ScrapeBase: ScrapeBase{
@@ -31,9 +32,10 @@ func NewMovieScrapeImpl(scrapePath *models.ScrapePath, ctx context.Context, v115
 			identifyImpl:   NewIdMovieImpl(scrapePath, ctx, tmdbImpl),
 			tmdbClient:     tmdbImpl.Client,
 			categoryImpl:   NewCategoryMovieImpl(scrapePath),
-			renameImpl:     NewRenameMovieImpl(scrapePath, ctx, v115Client, openlistClient),
+			renameImpl:     NewRenameMovieImpl(scrapePath, ctx, v115Client, openlistClient, baiduPanClient),
 			v115Client:     v115Client,
 			openlistClient: openlistClient,
+			baiduPanClient: baiduPanClient,
 		},
 	}
 }
