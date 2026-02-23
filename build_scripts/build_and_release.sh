@@ -223,6 +223,139 @@ print_colored "green" "========================================"
 print_colored "green" "Build completed!"
 print_colored "green" "========================================"
 
+# 飞牛系统FPK应用打包
+print_colored "cyan" "Starting FPK application build for 飞牛系统..."
+
+# 构建arm64架构的FPK
+print_colored "cyan" "Building FPK for arm64 architecture..."
+
+# 检查FNOS目录是否存在
+if [ ! -d "FNOS" ]; then
+    print_colored "red" "Error: FNOS directory not found"
+    print_colored "yellow" "Please create FNOS directory structure first"
+else
+    # 创建app目录
+    mkdir -p "FNOS/qmediasync-arm64/app"
+    
+    # 清理目标目录中的文件
+    if [ -f "FNOS/qmediasync-arm64/app/QMediaSync" ]; then
+        rm "FNOS/qmediasync-arm64/app/QMediaSync"
+        print_colored "yellow" "✓ Removed existing arm64 executable"
+    fi
+    
+    if [ -d "FNOS/qmediasync-arm64/app/web_statics" ]; then
+        rm -rf "FNOS/qmediasync-arm64/app/web_statics"
+        print_colored "yellow" "✓ Removed existing web_statics directory"
+    fi
+    
+    # 复制arm64可执行文件和web_statics目录
+    if [ -f "temp_build/QMediaSync_linux_arm64_exe" ]; then
+        cp "temp_build/QMediaSync_linux_arm64_exe" "FNOS/qmediasync-arm64/app/QMediaSync"
+        print_colored "green" "✓ Copied arm64 executable to FNOS/qmediasync-arm64/app/QMediaSync"
+    else
+        print_colored "red" "Error: arm64 executable not found"
+    fi
+    
+    if [ -d "web_statics" ]; then
+        cp -r "web_statics" "FNOS/qmediasync-arm64/app/"
+        print_colored "green" "✓ Copied web_statics directory to FNOS/qmediasync-arm64/app/"
+    else
+        print_colored "yellow" "Warning: web_statics directory not found"
+    fi
+    
+    # 切换到qmediasync-arm64目录并执行fnpack build
+    cd "FNOS/qmediasync-arm64"
+    if command -v "fnpack" >/dev/null 2>&1; then
+        print_colored "cyan" "Executing fnpack build for arm64..."
+        fnpack build
+        if [ $? -eq 0 ]; then
+            print_colored "green" "✓ FPK build completed for arm64"
+            
+            # 复制fpk文件回qmediasync目录
+            if [ -f "qmediasync-arm64.fpk" ]; then
+                cp "qmediasync-arm64.fpk" "../../QMediaSync_arm64.fpk"
+                print_colored "green" "✓ Copied arm64 FPK file back to qmediasync directory"
+            else
+                print_colored "red" "Error: FPK file not generated for arm64"
+            fi
+        else
+            print_colored "red" "Error: fnpack build failed for arm64"
+        fi
+    else
+        print_colored "yellow" "Warning: fnpack command not found, skipping FPK build for arm64"
+    fi
+    
+    # 切换回qmediasync目录
+    cd "../../"
+fi
+
+# 构建amd64架构的FPK
+print_colored "cyan" "Building FPK for amd64 architecture..."
+
+# 检查FNOS目录是否存在
+if [ ! -d "FNOS" ]; then
+    print_colored "red" "Error: FNOS directory not found"
+    print_colored "yellow" "Please create FNOS directory structure first"
+else
+    # 创建app目录
+    mkdir -p "FNOS/qmediasync-amd64/app"
+    
+    # 清理目标目录中的文件
+    if [ -f "FNOS/qmediasync-amd64/app/QMediaSync" ]; then
+        rm "FNOS/qmediasync-amd64/app/QMediaSync"
+        print_colored "yellow" "✓ Removed existing amd64 executable"
+    fi
+    
+    if [ -d "FNOS/qmediasync-amd64/app/web_statics" ]; then
+        rm -rf "FNOS/qmediasync-amd64/app/web_statics"
+        print_colored "yellow" "✓ Removed existing web_statics directory"
+    fi
+    
+    # 复制amd64可执行文件和web_statics目录
+    if [ -f "temp_build/QMediaSync_linux_amd64_exe" ]; then
+        cp "temp_build/QMediaSync_linux_amd64_exe" "FNOS/qmediasync-amd64/app/QMediaSync"
+        print_colored "green" "✓ Copied amd64 executable to FNOS/qmediasync-amd64/app/QMediaSync"
+    else
+        print_colored "red" "Error: amd64 executable not found"
+    fi
+    
+    if [ -d "web_statics" ]; then
+        cp -r "web_statics" "FNOS/qmediasync-amd64/app/"
+        print_colored "green" "✓ Copied web_statics directory to FNOS/qmediasync-amd64/app/"
+    else
+        print_colored "yellow" "Warning: web_statics directory not found"
+    fi
+    
+    # 切换到qmediasync-amd64目录并执行fnpack build
+    cd "FNOS/qmediasync-amd64"
+    if command -v "fnpack" >/dev/null 2>&1; then
+        print_colored "cyan" "Executing fnpack build for amd64..."
+        fnpack build
+        if [ $? -eq 0 ]; then
+            print_colored "green" "✓ FPK build completed for amd64"
+            
+            # 复制fpk文件回qmediasync目录
+            if [ -f "qmediasync-amd64.fpk" ]; then
+                cp "qmediasync-amd64.fpk" "../../QMediaSync_amd64.fpk"
+                print_colored "green" "✓ Copied amd64 FPK file back to qmediasync directory"
+            else
+                print_colored "red" "Error: FPK file not generated for amd64"
+            fi
+        else
+            print_colored "red" "Error: fnpack build failed for amd64"
+        fi
+    else
+        print_colored "yellow" "Warning: fnpack command not found, skipping FPK build for amd64"
+    fi
+    
+    # 切换回qmediasync目录
+    cd "../../"
+fi
+
+print_colored "green" "========================================"
+print_colored "green" "FPK build process completed!"
+print_colored "green" "========================================"
+
 # Docker镜像打包
 print_colored "cyan" "Starting Docker image build..."
 
@@ -271,10 +404,10 @@ print_colored "green" "Creating GitHub Release..."
 # Check if GitHub CLI is installed
 if ! command_exists "gh"; then
     print_colored "yellow" "Warning: GitHub CLI (gh) not installed"
-    print_colored "yellow" "Please manually upload these files to GitHub Release:"
-    ls QMediaSync_*.zip QMediaSync_*.tar.gz 2>/dev/null || true
-    echo
-    print_colored "yellow" "Or install GitHub CLI: https://cli.github.com/"
+print_colored "yellow" "Please manually upload these files to GitHub Release:"
+ls QMediaSync_*.zip QMediaSync_*.tar.gz QMediaSync_*.fpk 2>/dev/null || true
+echo
+print_colored "yellow" "Or install GitHub CLI: https://cli.github.com/"
     
     # Cleanup temp directory
     # rm -rf "temp_build"
@@ -285,14 +418,14 @@ if ! command_exists "gh"; then
     print_colored "green" "========================================"
     echo
     print_colored "cyan" "Release files:"
-    ls QMediaSync_*.zip QMediaSync_*.tar.gz 2>/dev/null || true
+    ls QMediaSync_*.zip QMediaSync_*.tar.gz QMediaSync_*.fpk 2>/dev/null || true
     
     # Ask user if they want to clean up build files
     echo
     read -p "Do you want to clean up build files? (y/n): " cleanup
     if [ "$cleanup" = "y" ] || [ "$cleanup" = "Y" ]; then
         print_colored "yellow" "Cleaning up build files..."
-        rm -f QMediaSync_*.zip QMediaSync_*.tar.gz 2>/dev/null || true
+        rm -f QMediaSync_*.zip QMediaSync_*.tar.gz QMediaSync_*.fpk 2>/dev/null || true
         print_colored "green" "✓ Build files cleaned up"
     else
         print_colored "yellow" "Build files preserved"
@@ -316,7 +449,8 @@ if gh release create "$TAG" \
     --title "Release $TAG" \
     --notes-file "release_body.txt" \
     QMediaSync_*.zip \
-    QMediaSync_*.tar.gz; then
+    QMediaSync_*.tar.gz \
+    QMediaSync_*.fpk; then
     
     echo
     print_colored "green" "✓ GitHub Release created successfully in qicfan/qmediasync!"
@@ -376,14 +510,14 @@ print_colored "green" "All operations completed!"
 print_colored "green" "========================================"
 echo
 print_colored "cyan" "Release files:"
-ls QMediaSync_*.zip QMediaSync_*.tar.gz 2>/dev/null || true
+ls QMediaSync_*.zip QMediaSync_*.tar.gz QMediaSync_*.fpk 2>/dev/null || true
 
 # Ask user if they want to clean up build files
 echo
 read -p "Do you want to clean up build files? (y/n): " cleanup
 if [ "$cleanup" = "y" ] || [ "$cleanup" = "Y" ]; then
     print_colored "yellow" "Cleaning up build files..."
-    rm -f QMediaSync_*.zip QMediaSync_*.tar.gz 2>/dev/null || true
+    rm -f QMediaSync_*.zip QMediaSync_*.tar.gz QMediaSync_*.fpk 2>/dev/null || true
     print_colored "green" "✓ Build files cleaned up"
 else
     print_colored "yellow" "Build files preserved"

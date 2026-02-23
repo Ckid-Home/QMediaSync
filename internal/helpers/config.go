@@ -80,8 +80,8 @@ var GlobalConfig Config
 var RootDir string
 var ConfigDir string
 var DataDir string
-var ShareDirs string
-var AccessiblePaths string
+var SharePathes string
+var AccessiblePathes string
 var IsFnOS bool
 var IsRelease bool
 var Guid string

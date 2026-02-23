@@ -106,17 +106,17 @@ func GetLocalPath(parentPath string) ([]DirResp, error) {
 		} else {
 			if helpers.IsFnOS {
 				// 如果是飞牛环境下，使用环境变量来获取有权限的目录
-				if helpers.AccessiblePaths == "" {
-					helpers.AccessiblePaths = os.Getenv("TRIM_DATA_ACCESSIBLE_PATHS")
+				if helpers.AccessiblePathes == "" {
+					helpers.AccessiblePathes = os.Getenv("TRIM_DATA_ACCESSIBLE_PATHS")
 				}
-				if helpers.ShareDirs == "" {
-					helpers.ShareDirs = os.Getenv("TRIM_DATA_SHARE_PATHS")
+				if helpers.SharePathes == "" {
+					helpers.SharePathes = os.Getenv("TRIM_DATA_SHARE_PATHS")
 				}
-				helpers.AppLogger.Infof("AccessiblePaths: %s", helpers.AccessiblePaths)
-				helpers.AppLogger.Infof("ShareDirs: %s", helpers.ShareDirs)
-				if helpers.AccessiblePaths != "" || helpers.ShareDirs != "" {
-					accessiblePaths := helpers.AccessiblePaths
-					sharePaths := helpers.ShareDirs
+				helpers.AppLogger.Infof("AccessiblePathes: %s", helpers.AccessiblePathes)
+				helpers.AppLogger.Infof("SharePathes: %s", helpers.SharePathes)
+				if helpers.AccessiblePathes != "" || helpers.SharePathes != "" {
+					accessiblePaths := helpers.AccessiblePathes
+					sharePaths := helpers.SharePathes
 					accessiblePaths = ":" + sharePaths
 					// 用冒号分割
 					paths := strings.Split(accessiblePaths, ":")
@@ -520,13 +520,13 @@ func makeBaiduPanPathList(parentId string, folderName string, accountId uint) (s
 // 飞牛执行目录授权操作后，会触发该接口调用
 func UpdateFNPath(c *gin.Context) {
 	type updateFNPathReq struct {
-		Path string `json:"path"`
+		Path string `json:"path" form:"path"`
 	}
 	var req updateFNPathReq
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
 		return
 	}
-	helpers.AccessiblePaths = req.Path
+	helpers.AccessiblePathes = req.Path
 	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "更新目录成功", Data: nil})
 }
