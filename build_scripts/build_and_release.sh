@@ -272,8 +272,8 @@ else
             print_colored "green" "✓ FPK build completed for arm64"
             
             # 复制fpk文件回qmediasync目录
-            if [ -f "qmediasync-arm64.fpk" ]; then
-                cp "qmediasync-arm64.fpk" "../../QMediaSync_arm64.fpk"
+            if [ -f "qmediasync.fpk" ]; then
+                cp "qmediasync.fpk" "../../QMediaSync_arm64.fpk"
                 print_colored "green" "✓ Copied arm64 FPK file back to qmediasync directory"
             else
                 print_colored "red" "Error: FPK file not generated for arm64"
@@ -335,8 +335,8 @@ else
             print_colored "green" "✓ FPK build completed for amd64"
             
             # 复制fpk文件回qmediasync目录
-            if [ -f "qmediasync-amd64.fpk" ]; then
-                cp "qmediasync-amd64.fpk" "../../QMediaSync_amd64.fpk"
+            if [ -f "qmediasync.fpk" ]; then
+                cp "qmediasync.fpk" "../../QMediaSync_amd64.fpk"
                 print_colored "green" "✓ Copied amd64 FPK file back to qmediasync directory"
             else
                 print_colored "red" "Error: FPK file not generated for amd64"
