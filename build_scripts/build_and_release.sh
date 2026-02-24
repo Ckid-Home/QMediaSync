@@ -244,6 +244,14 @@ else
     # 创建app目录
     mkdir -p "FNOS/qmediasync-arm64/app"
     
+    # 更新manifest文件中的version字段
+    if [ -f "FNOS/qmediasync-arm64/manifest" ]; then
+        sed -i "s/^version\s*=.*/version = $TAG/g" "FNOS/qmediasync-arm64/manifest"
+        print_colored "green" "✓ Updated version in FNOS/qmediasync-arm64/manifest to $TAG"
+    else
+        print_colored "yellow" "Warning: FNOS/qmediasync-arm64/manifest not found"
+    fi
+    
     # 清理目标目录中的文件
     if [ -f "FNOS/qmediasync-arm64/app/QMediaSync" ]; then
         rm "FNOS/qmediasync-arm64/app/QMediaSync"
@@ -313,6 +321,14 @@ if [ ! -d "FNOS" ]; then
 else
     # 创建app目录
     mkdir -p "FNOS/qmediasync-amd64/app"
+    
+    # 更新manifest文件中的version字段
+    if [ -f "FNOS/qmediasync-amd64/manifest" ]; then
+        sed -i "s/^version\s*=.*/version = $TAG/g" "FNOS/qmediasync-amd64/manifest"
+        print_colored "green" "✓ Updated version in FNOS/qmediasync-amd64/manifest to $TAG"
+    else
+        print_colored "yellow" "Warning: FNOS/qmediasync-amd64/manifest not found"
+    fi
     
     # 清理目标目录中的文件
     if [ -f "FNOS/qmediasync-amd64/app/QMediaSync" ]; then

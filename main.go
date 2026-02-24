@@ -412,7 +412,8 @@ func initOthers() {
 	// if helpers.IsRelease {
 	// 启动同步任务队列管理器
 	synccron.InitNewSyncQueueManager()
-	synccron.InitCron() // 初始化定时任务（包含备份定时任务）
+	synccron.InitCron()     // 初始化定时任务（包含备份定时任务）
+	synccron.InitSyncCron() // 初始化同步目录的定时任务
 	// 初始化备份服务
 	models.InitBackupService()
 	// }
@@ -457,6 +458,7 @@ func setRouter(r *gin.Engine) {
 	r.GET("/api/logs/download", controllers.DownloadLogFile)             // 下载日志文件
 
 	r.POST("/path/update-fn-access-path", controllers.UpdateFNPath) // 更新Fn访问路径
+	r.GET("/api/path/is-fn-os", controllers.IsFnOS)                 // 查询是否是飞牛环境
 
 	api := r.Group("/api")
 	api.Use(controllers.JWTAuthMiddleware())

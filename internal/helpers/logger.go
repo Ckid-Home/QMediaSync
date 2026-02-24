@@ -70,6 +70,10 @@ func (q *QLogger) Warn(format string) {
 }
 
 func NewLogger(logFileName string, isConsole bool, rotate bool) *QLogger {
+	if IsFnOS {
+		// 飞牛环境下不往控制台输出日志
+		isConsole = false
+	}
 	logFile := filepath.Join(ConfigDir, logFileName)
 	var lumLogger *lumberjack.Logger
 	// 创建多写入器

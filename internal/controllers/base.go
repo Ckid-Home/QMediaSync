@@ -199,3 +199,7 @@ func Cors() gin.HandlerFunc {
 		c.Next() //  处理请求
 	}
 }
+
+func IsFnOS(c *gin.Context) {
+	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "", Data: helpers.IsFnOS})
+}

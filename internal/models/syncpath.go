@@ -106,6 +106,7 @@ func (sp *SyncPath) GetMinVideoSize() int64 {
 }
 
 func (sp *SyncPath) GetVideoExt() []string {
+	helpers.AppLogger.Infof("同步目录 %d 视频扩展名: %s", sp.ID, sp.VideoExtArr)
 	if len(sp.VideoExtArr) == 0 {
 		return SettingsGlobal.VideoExtArr
 	}
@@ -188,8 +189,9 @@ func (sp *SyncPath) Update(sourceType SourceType, accountId uint, baseCid, local
 		"enable_cron":   enableCron,
 		"updated_at":    time.Now().Unix(),
 	}
-	strmSettingMap := sp.SettingStrm.ToMap(true)
+	strmSettingMap := sp.SettingStrm.ToMap(true, false)
 	maps.Copy(updates, strmSettingMap)
+	// helpers.AppLogger.Infof("更新同步路径 %d 数据: %+v", sp.ID, updates)
 	result := db.Db.Model(sp).Updates(updates)
 	// 创建同步路径
 	fullPath := filepath.Join(localPath, remotePath)
@@ -242,7 +244,7 @@ func (sp *SyncPath) GetFullLocalPath() string {
 }
 
 func (sp *SyncPath) ParseVideoAndMetaExt() {
-	sp.SettingStrm = *sp.SettingStrm.DecodeArr()
+	sp.SettingStrm = *sp.SettingStrm.DecodeArr(false)
 }
 
 func (sp *SyncPath) UpdateLastSync() {
@@ -304,7 +306,7 @@ func CreateSyncPath(sourceType SourceType, accountId uint, baseCid, localPath, r
 	}
 
 	if customConfig {
-		syncPathSetting = *syncPathSetting.DecodeArr()
+		syncPathSetting = *syncPathSetting.DecodeArr(false)
 	} else {
 		syncPathSetting = GetStrmSettingDefault()
 	}
@@ -320,7 +322,7 @@ func CreateSyncPath(sourceType SourceType, accountId uint, baseCid, localPath, r
 		"created_at":    time.Now().Unix(),
 		"updated_at":    time.Now().Unix(),
 	}
-	strmSettingMap := syncPathSetting.ToMap(true)
+	strmSettingMap := syncPathSetting.ToMap(true, false)
 	maps.Copy(syncPathData, strmSettingMap)
 
 	// helpers.AppLogger.Infof("创建同步路径数据: %+v", syncPathData)
@@ -419,7 +421,7 @@ func GetSyncPathList(page, pageSize int, enableCron bool, sourceType SourceType)
 	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&syncPaths)
 	accountCache := make(map[uint]*Account)
 	for _, syncPath := range syncPaths {
-		syncPath.ParseVideoAndMetaExt()
+		// syncPath.ParseVideoAndMetaExt()
 		if syncPath.AccountId == 0 {
 			continue
 		}

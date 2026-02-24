@@ -106,9 +106,9 @@ func GetLocalPath(parentPath string) ([]DirResp, error) {
 		} else {
 			if helpers.IsFnOS {
 				// 如果是飞牛环境下，使用环境变量来获取有权限的目录
-				// if helpers.AccessiblePathes == "" {
-				helpers.AccessiblePathes = os.Getenv("TRIM_DATA_ACCESSIBLE_PATHS")
-				// }
+				if helpers.AccessiblePathes == "" {
+					helpers.AccessiblePathes = os.Getenv("TRIM_DATA_ACCESSIBLE_PATHS")
+				}
 				// if helpers.SharePathes == "" {
 				helpers.SharePathes = os.Getenv("TRIM_DATA_SHARE_PATHS")
 				// }
@@ -117,7 +117,10 @@ func GetLocalPath(parentPath string) ([]DirResp, error) {
 				if helpers.AccessiblePathes != "" || helpers.SharePathes != "" {
 					accessiblePaths := helpers.AccessiblePathes
 					sharePaths := helpers.SharePathes
-					accessiblePaths += ":" + sharePaths
+					if sharePaths != "" {
+						accessiblePaths += ":" + sharePaths
+					}
+					helpers.AppLogger.Infof("合并后有权限访问的目录为: %s", accessiblePaths)
 					// 用冒号分割
 					paths := strings.Split(accessiblePaths, ":")
 					for _, path := range paths {
@@ -528,5 +531,6 @@ func UpdateFNPath(c *gin.Context) {
 		return
 	}
 	helpers.AccessiblePathes = req.Path
+	helpers.AppLogger.Infof("更新飞牛有权限的目录为: %s", req.Path)
 	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "更新目录成功", Data: nil})
 }

@@ -60,7 +60,7 @@ func (t SettingThreads) ToMap() map[string]int {
 	}
 }
 
-func (s SettingStrm) ToMap(isDb bool) map[string]any {
+func (s SettingStrm) ToMap(isDb bool, isSetting bool) map[string]any {
 	dataMap := map[string]any{
 		"cron":             s.Cron,
 		"min_video_size":   s.MinVideoSize,
@@ -72,7 +72,7 @@ func (s SettingStrm) ToMap(isDb bool) map[string]any {
 		"check_meta_mtime": s.CheckMetaMtime,
 		"local_proxy":      s.LocalProxy,
 	}
-	if s.Cron == "" {
+	if s.Cron == "" && isSetting {
 		dataMap["cron"] = helpers.GlobalConfig.Strm.Cron // 使用默认配置
 	} else {
 		dataMap["cron"] = s.Cron
@@ -84,13 +84,13 @@ func (s SettingStrm) ToMap(isDb bool) map[string]any {
 		// 不是数据库则返回Arr
 		if s.MetaExt != "" {
 			dataMap["meta_ext_arr"] = s.MetaExtArr
-		} else {
+		} else if isSetting {
 			// 从config.yml中读取默认的metaExt
 			dataMap["meta_ext_arr"] = helpers.GlobalConfig.Strm.MetaExt
 		}
 		if s.VideoExt != "" {
 			dataMap["video_ext_arr"] = s.VideoExtArr
-		} else {
+		} else if isSetting {
 			// 从config.yml中读取默认的视频扩展名
 			dataMap["video_ext_arr"] = helpers.GlobalConfig.Strm.VideoExt
 		}
@@ -144,14 +144,14 @@ func (s SettingStrm) EncodeArr() *SettingStrm {
 	return &s
 }
 
-func (s SettingStrm) DecodeArr() *SettingStrm {
+func (s SettingStrm) DecodeArr(isSetting bool) *SettingStrm {
 	if s.MetaExt != "" {
 		if err := json.Unmarshal([]byte(s.MetaExt), &s.MetaExtArr); err != nil {
 			helpers.AppLogger.Errorf("将元数据扩展名转换为数组失败: %v", err)
 			return nil
 		}
 	}
-	if len(s.MetaExtArr) == 0 {
+	if len(s.MetaExtArr) == 0 && isSetting {
 		s.MetaExtArr = helpers.GlobalConfig.Strm.MetaExt
 	}
 	if s.VideoExt != "" {
@@ -160,7 +160,7 @@ func (s SettingStrm) DecodeArr() *SettingStrm {
 			return nil
 		}
 	}
-	if len(s.VideoExtArr) == 0 {
+	if len(s.VideoExtArr) == 0 && isSetting {
 		s.VideoExtArr = helpers.GlobalConfig.Strm.VideoExt
 	}
 	if s.ExcludeName != "" {
@@ -172,7 +172,7 @@ func (s SettingStrm) DecodeArr() *SettingStrm {
 	if len(s.ExcludeNameArr) == 0 {
 		s.ExcludeNameArr = []string{}
 	}
-	if s.Cron == "" {
+	if s.Cron == "" && isSetting {
 		s.Cron = helpers.GlobalConfig.Strm.Cron
 	}
 	return &s
@@ -236,8 +236,9 @@ func (settings *Settings) UpdateStrm(req SettingStrm) bool {
 		return false
 	}
 	settings.SettingStrm = *strm
+	helpers.AppLogger.Infof("更新STRM设置: %+v", SettingsGlobal.SettingStrm.VideoExtArr)
 	// ctx := context.Background()
-	updateData := strm.ToMap(true)
+	updateData := strm.ToMap(true, true)
 	err := db.Db.Model(settings).Where("id = ?", settings.ID).Updates(updateData).Error
 	// _, err = gorm.G[Settings](db.Db).Where("id = ?", settings.ID).Updates(ctx, updateData)
 	if err != nil {
@@ -252,7 +253,7 @@ func LoadSettings() {
 		helpers.AppLogger.Errorf("load settings failed: %v", err)
 		return
 	}
-	SettingsGlobal.SettingStrm = *SettingsGlobal.SettingStrm.DecodeArr()
+	SettingsGlobal.SettingStrm = *SettingsGlobal.SettingStrm.DecodeArr(true)
 	if SettingsGlobal.MinVideoSize == 104857600 {
 		SettingsGlobal.MinVideoSize = 100
 		db.Db.Save(SettingsGlobal)

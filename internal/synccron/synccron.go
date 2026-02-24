@@ -28,7 +28,8 @@ func StartSyncCron() {
 	}
 	for _, syncPath := range syncPaths {
 		// 没开启定时任务或者自定义CRON表达式的同步目录跳过
-		if !syncPath.EnableCron || syncPath.SettingStrm.Cron != "" {
+		if syncPath.SettingStrm.Cron != "" {
+			helpers.AppLogger.Infof("同步目录 %d 已启用自定义的定时任务，cron表达式: %s", syncPath.ID, syncPath.SettingStrm.Cron)
 			continue
 		}
 		// 将同步目录ID添加到处理队列，而不是直接执行
@@ -113,7 +114,7 @@ func RefreshOAuthAccessToken() {
 		if account.SourceType == models.SourceTypeBaiduPan {
 			// 刷新百度网盘的访问凭证
 			if account.TokenExpiriesTime-86400 > now {
-				helpers.AppLogger.Infof("百度网盘账号token未过期，账号ID: %d, 百度网盘用户名：%s， 过期时间：%s", account.ID, account.Username, time.Unix(account.TokenExpiriesTime-86400, 0).Format("2006-01-02 15:04:05"))
+				// helpers.AppLogger.Infof("百度网盘账号token未过期，账号ID: %d, 百度网盘用户名：%s， 过期时间：%s", account.ID, account.Username, time.Unix(account.TokenExpiriesTime-86400, 0).Format("2006-01-02 15:04:05"))
 				continue
 			}
 			// 向授权服务器发送刷新请求，拿到新token
@@ -259,18 +260,22 @@ func InitCron() {
 // 初始化STRM同步目录的定时任务
 func InitSyncCron() {
 	if SyncCron != nil {
+		helpers.AppLogger.Info("已存在同步目录的定时任务，先停止")
 		SyncCron.Stop()
 	}
 	SyncCron = cron.New()
 	// 查询所有同步目录
 	syncPaths, _ := models.GetSyncPathList(1, 10000000, true, "")
 	if len(syncPaths) == 0 {
+		helpers.AppLogger.Info("没有启用定时任务的同步目录")
 		return
 	}
 	for _, syncPath := range syncPaths {
-		if syncPath.Cron == "" || !syncPath.EnableCron {
+		if syncPath.Cron == "" {
+			helpers.AppLogger.Infof("同步目录 %d 未启用自定义的定时任务", syncPath.ID)
 			continue
 		}
+		helpers.AppLogger.Infof("已添加同步目录 %d 的定时任务，cron表达式: %s", syncPath.ID, syncPath.Cron)
 		SyncCron.AddFunc(syncPath.Cron, func() {
 			// 将同步目录ID添加到处理队列，而不是直接执行
 			if err := AddNewSyncTask(syncPath.ID, SyncTaskTypeStrm); err != nil {
@@ -279,6 +284,7 @@ func InitSyncCron() {
 			}
 		})
 	}
+	SyncCron.Start()
 }
 
 func addBackupCron() {

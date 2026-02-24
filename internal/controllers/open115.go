@@ -282,15 +282,15 @@ func Get115UrlByPickCode(c *gin.Context) {
 		if req.Force == 0 {
 			if models.SettingsGlobal.LocalProxy == 1 {
 				// 跳转到本地代理
-				helpers.AppLogger.Infof("通过本地代理访问115下载链接，非qms 8095播放: %s", cachedUrl)
+				helpers.AppLogger.Infof("通过本地代理访问115下载链接，emby端口播放: %s", cachedUrl)
 				proxyUrl := fmt.Sprintf("/proxy-115?url=%s", url.QueryEscape(cachedUrl))
 				c.Redirect(http.StatusFound, proxyUrl)
 			} else {
-				helpers.AppLogger.Infof("302重定向到115下载链接，非直链qms 8095播放: %s", cachedUrl)
+				helpers.AppLogger.Infof("302重定向到115下载链接，emby端口播放: %s", cachedUrl)
 				c.Redirect(http.StatusFound, cachedUrl)
 			}
 		} else {
-			helpers.AppLogger.Infof("302重定向到115下载链接， 直链qms 8095播放: %s", cachedUrl)
+			helpers.AppLogger.Infof("302重定向到115下载链接， 直链播放: %s", cachedUrl)
 			c.Redirect(http.StatusFound, cachedUrl)
 		}
 	}

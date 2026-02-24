@@ -316,7 +316,7 @@ func TestHttpProxy(c *gin.Context) {
 func GetStrmConfig(c *gin.Context) {
 	// 获取设置
 	models.LoadSettings() // 确保设置已加载
-	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "获取STRM配置成功", Data: models.SettingsGlobal.SettingStrm.ToMap(false)})
+	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "获取STRM配置成功", Data: models.SettingsGlobal.SettingStrm.ToMap(false, true)})
 }
 
 // UpdateStrmConfig 更新STRM配置
