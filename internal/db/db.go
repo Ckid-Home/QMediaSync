@@ -57,10 +57,25 @@ func ConnectPostgres(dbConfig *database.Config) error {
 		},
 	)
 
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DBName, dbConfig.SSLMode)
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
+		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.SSLMode)
 	helpers.AppLogger.Infof("连接数据库: %s", connStr)
 	sqlDB, cerr := sql.Open("postgres", connStr)
+	if cerr != nil {
+		helpers.AppLogger.Errorf("连接数据库失败: %v", cerr)
+		return cerr
+	}
+	// 检查数据库是否存在，没有则新建
+	_, eerr := sqlDB.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbConfig.DBName))
+	if eerr != nil {
+		helpers.AppLogger.Errorf("创建数据库 %s 失败: %v", dbConfig.DBName, eerr)
+		return eerr
+	}
+	// 重新连接数据库
+	connStr = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DBName, dbConfig.SSLMode)
+	helpers.AppLogger.Infof("连接数据库: %s", connStr)
+	sqlDB, cerr = sql.Open("postgres", connStr)
 	if cerr != nil {
 		helpers.AppLogger.Errorf("连接数据库失败: %v", cerr)
 		return cerr
@@ -71,9 +86,8 @@ func ConnectPostgres(dbConfig *database.Config) error {
 	sqlDB.SetConnMaxLifetime(60 * time.Minute)   // 连接最多使用60分钟
 	sqlDB.SetConnMaxIdleTime(1 * time.Minute)    // 空闲超过1分钟则关闭
 	var err error
-	Db, err = gorm.Open(postgres.New(postgres.Config{
-		Conn: sqlDB,
-	}), &gorm.Config{})
+	pg := postgres.New(postgres.Config{Conn: sqlDB})
+	Db, err = gorm.Open(pg, &gorm.Config{})
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect database: %v", err))
 	}
