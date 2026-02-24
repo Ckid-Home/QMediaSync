@@ -457,8 +457,8 @@ func setRouter(r *gin.Engine) {
 	r.GET("/api/logs/old", controllers.GetOldLogs)                       // HTTP获取旧日志
 	r.GET("/api/logs/download", controllers.DownloadLogFile)             // 下载日志文件
 
-	r.POST("/path/update-fn-access-path", controllers.UpdateFNPath) // 更新Fn访问路径
-	r.GET("/api/path/is-fn-os", controllers.IsFnOS)                 // 查询是否是飞牛环境
+	r.POST("/api/update-fn-access-path", controllers.UpdateFNPath) // 更新Fn访问路径
+	r.GET("/api/path/is-fn-os", controllers.IsFnOS)                // 查询是否是飞牛环境
 
 	api := r.Group("/api")
 	api.Use(controllers.JWTAuthMiddleware())

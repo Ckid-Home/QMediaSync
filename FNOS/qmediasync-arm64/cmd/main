@@ -7,7 +7,7 @@ PID_FILE="${TRIM_PKGVAR}/app.pid"
 CMD=""
 
 log_msg() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG_FILE}
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
 
 start_process() {
@@ -17,7 +17,7 @@ start_process() {
 
     log_msg "应用启动中 ..."
     cd "$TRIM_APPDEST"
-    ./QMediaSync --guid ${TRIM_UID} --fnos true >> ${LOG_FILE} 2>&1 &
+    ./QMediaSync --guid ${TRIM_UID} --fnos true 2>&1 &
     # write pid to pidfile
     printf "%s" "$!" > ${PID_FILE}
     return 0
