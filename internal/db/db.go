@@ -87,7 +87,7 @@ func ConnectPostgres(dbConfig *database.Config) error {
 	// 重新连接数据库
 	connStr = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DBName, dbConfig.SSLMode)
-	helpers.AppLogger.Infof("连接数据库: %s", connStr)
+	helpers.AppLogger.Infof("重新连接数据库: %s", connStr)
 	sqlDB, cerr = sql.Open("postgres", connStr)
 	if cerr != nil {
 		helpers.AppLogger.Errorf("连接数据库失败: %v", cerr)
