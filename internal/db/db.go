@@ -66,10 +66,23 @@ func ConnectPostgres(dbConfig *database.Config) error {
 		return cerr
 	}
 	// 检查数据库是否存在，没有则新建
-	_, eerr := sqlDB.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbConfig.DBName))
+	// 检查数据库是否已存在
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)"
+	eerr := sqlDB.QueryRow(query, dbConfig.DBName).Scan(&exists)
 	if eerr != nil {
-		helpers.AppLogger.Errorf("创建数据库 %s 失败: %v", dbConfig.DBName, eerr)
 		return eerr
+	}
+
+	// 如果不存在，则创建
+	if !exists {
+		_, cerr = sqlDB.Exec(fmt.Sprintf("CREATE DATABASE %s", dbConfig.DBName))
+		if cerr != nil {
+			return fmt.Errorf("创建数据库失败: %v", cerr)
+		}
+		log.Printf("数据库 %s 创建成功", dbConfig.DBName)
+	} else {
+		log.Printf("数据库 %s 已存在", dbConfig.DBName)
 	}
 	// 重新连接数据库
 	connStr = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",

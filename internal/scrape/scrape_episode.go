@@ -137,6 +137,8 @@ func (t *tvShowScrapeImpl) Process(mediaFile *models.ScrapeMediaFile) error {
 			mediaFile.RenameFailed(uerr.Error())
 			return uerr
 		}
+	} else {
+		t.SyncFilesToSTRMPath(mediaFile, nil)
 	}
 	// 将自己标记为完成，状态立即完成，网盘的临时文件等网盘上传完成删除
 	t.FinishEpisode(mediaFile)
@@ -376,6 +378,9 @@ func (t *tvShowScrapeImpl) SyncFilesToSTRMPath(mediaFile *models.ScrapeMediaFile
 	})
 	models.DeleteSyncRecordById(syncStrm.Sync.ID)
 	// 将其他文件放入STRM同步目录内
+	if files == nil {
+		return
+	}
 	for _, file := range files {
 		destPath := filepath.Join(syncPath.LocalPath, file.DestPath)
 		if !helpers.PathExists(destPath) {

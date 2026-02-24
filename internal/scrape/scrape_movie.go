@@ -143,6 +143,9 @@ func (m *movieScrapeImpl) Process(mediaFile *models.ScrapeMediaFile) error {
 			mediaFile.RenameFailed(uerr.Error())
 			return uerr
 		}
+	} else {
+		// 将文件同步到STRM同步目录内
+		m.SyncFilesToSTRMPath(mediaFile, nil)
 	}
 	// 将自己标记为完成，状态立即完成，网盘的临时文件等网盘上传完成删除
 	m.FinishMovie(mediaFile)
@@ -335,6 +338,9 @@ func (m *movieScrapeImpl) SyncFilesToSTRMPath(mediaFile *models.ScrapeMediaFile,
 		LocalFilePath: filepath.Join(syncPath.LocalPath, mediaFile.Media.Path, mediaFile.NewVideoBaseName+".strm"),
 	})
 	models.DeleteSyncRecordById(syncStrm.Sync.ID)
+	if files == nil {
+		return
+	}
 	// 将其他文件放入STRM同步目录内
 	for _, file := range files {
 		destPath := filepath.Join(syncPath.LocalPath, file.DestPath)
