@@ -48,6 +48,7 @@ WORKDIR /app
 COPY --from=builder /app/QMediaSync .
 COPY web_statics ./web_statics/
 COPY scripts ./scripts/
+COPY assets/db_config.html ./web_statics/
 COPY icon.ico .
 RUN chmod +x /app/scripts/docker-entrypoint.sh
 RUN chmod +x /app/scripts/watch_update.sh
