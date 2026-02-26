@@ -43,7 +43,7 @@ func NewEmbeddedManager(config *Config) *EmbeddedManager {
 	manager := &EmbeddedManager{
 		config: config,
 	}
-	if helpers.Guid == "" {
+	if helpers.Guid == "" || helpers.Guid == "0" {
 		manager.UserName = "qms"
 		manager.GroupName = "qms"
 		manager.userSwitcher = NewUserSwitcher(manager.UserName)
@@ -219,16 +219,16 @@ dynamic_shared_memory_type = %s
 unix_socket_directories = '%s'
 
 # 日志配置
-// log_destination = 'stderr'
-// logging_collector = on
+log_destination = 'stderr'
+logging_collector = on
 // log_directory = '%s'
 // log_filename = 'postgres.log'
-// log_file_mode = 0644
-// log_rotation_age = 1d
-// log_rotation_size = 100MB
-// log_truncate_on_rotation = on
-// log_min_error_statement = error
-// log_min_duration_statement = -1
+log_file_mode = 0644
+log_rotation_age = 1d
+log_rotation_size = 10MB
+log_truncate_on_rotation = on
+log_min_error_statement = error
+log_min_duration_statement = -1
 // log_checkpoints = on
 // log_connections = on
 // log_disconnections = on
@@ -257,7 +257,7 @@ max_parallel_workers = 8
 	if err := os.WriteFile(confPath, []byte(strings.TrimSpace(confContent)), 0750); err != nil {
 		return fmt.Errorf("写入 postgresql.conf 失败: %v", err)
 	}
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS != "windows" && m.UserName != "" {
 		// 改变所有者
 		exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), confPath).Run()
 		helpers.AppLogger.Infof("设置Postgres配置文件 %s 所有者为%s:%s成功", confPath, m.UserName, m.GroupName)
@@ -273,7 +273,7 @@ host    all             all             ::1/128                 trust
 	if err := os.WriteFile(hbaPath, []byte(strings.TrimSpace(hbaContent)), 0750); err != nil {
 		return fmt.Errorf("写入 pg_hba.conf 失败: %v", err)
 	}
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS != "windows" && m.UserName != "" {
 		// 改变所有者
 		exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), hbaPath).Run()
 		helpers.AppLogger.Infof("设置Postgres HBA文件 %s 所有者为%s:%s成功", hbaPath, m.UserName, m.GroupName)

@@ -24,34 +24,6 @@ func NewUserSwitcher(userName string) *UserSwitcher {
 	return u
 }
 
-// // 根据 UID 查找用户名
-// func (u *UserSwitcher) getUsernameByUID() error {
-// 	// 方法1：使用 getent passwd 命令（优先在容器环境中使用）
-// 	cmd := exec.Command("getent", "passwd", u.uid)
-// 	output, err := cmd.Output()
-// 	if err == nil {
-// 		helpers.AppLogger.Infof("使用 getent passwd 查找 UID %s 对应的用户成功: %s\n", u.uid, string(output))
-// 		parts := strings.Split(strings.TrimSpace(string(output)), ":")
-// 		if len(parts) > 0 {
-// 			u.username = parts[0]
-// 			helpers.AppLogger.Infof("使用 getent passwd 解析 UID %s 对应的用户名: %s\n", u.uid, u.username)
-// 			return nil
-// 		}
-// 	}
-
-// 	// 方法2：使用 user.LookupId（备选方案）
-// 	userInfo, err := user.LookupId(u.uid)
-// 	if err != nil {
-// 		helpers.AppLogger.Infof("使用 user.LookupId 查找 UID %s 对应的用户失败: %v\n", u.uid, err)
-// 	} else {
-// 		u.username = userInfo.Username
-// 		helpers.AppLogger.Infof("使用 user.LookupId 查找 UID %s 对应的用户成功: %s\n", u.uid, u.username)
-// 		return nil
-// 	}
-
-// 	return fmt.Errorf("找不到 UID %s 对应的用户", u.uid)
-// }
-
 // RunCommandAsUser 使用 su 命令以指定用户身份运行命令
 func (u *UserSwitcher) RunCommandAsUser(command string, args ...string) (string, error) {
 	var output []byte
@@ -83,7 +55,7 @@ func (u *UserSwitcher) RunCommandAsUserWithEnv(env map[string]string, command st
 	// 构建环境变量字符串
 	var err error
 	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || u.username == "" {
 		// 先设置环境变量
 		for key, value := range env {
 			os.Setenv(key, value)
