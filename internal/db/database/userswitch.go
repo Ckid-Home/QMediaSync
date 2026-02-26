@@ -55,25 +55,13 @@ func (u *UserSwitcher) RunCommandAsUserWithEnv(env map[string]string, command st
 	// 构建环境变量字符串
 	var err error
 	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" || u.username == "" {
-		// 先设置环境变量
-		for key, value := range env {
-			os.Setenv(key, value)
-		}
-		// 直接启动
-		cmd = exec.Command(command, args...)
-		if runtime.GOOS == "windows" {
-			cmd.SysProcAttr = getSysProcAttr()
-		}
-	} else {
-		envVars := ""
-		for key, value := range env {
-			envVars += fmt.Sprintf("export %s=%s; ", key, value)
-		}
-		fullCommand := fmt.Sprintf("%s%s", envVars, command+" "+strings.Join(args, " "))
-		fullArgs := []string{"-", u.username, "-s", "/bin/bash", "-c", fullCommand}
-		cmd = exec.Command("su", fullArgs...)
+	envVars := ""
+	for key, value := range env {
+		envVars += fmt.Sprintf("export %s=%s; ", key, value)
 	}
+	fullCommand := fmt.Sprintf("%s%s", envVars, command+" "+strings.Join(args, " "))
+	fullArgs := []string{"-", u.username, "-s", "/bin/bash", "-c", fullCommand}
+	cmd = exec.Command("su", fullArgs...)
 	helpers.AppLogger.Infof("执行命令: %s", cmd.String())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

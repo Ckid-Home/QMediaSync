@@ -6,14 +6,10 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 RUN apk update
 # 安装依赖
 RUN apk add --no-cache \
-    git \
-    make \
-    gcc \
-    musl-dev \
     curl \
     wget \
     tzdata build-base ffmpeg sudo \
-    postgresql15-jit postgresql15-client bash tzdata inotify-tools ca-certificates
+    postgresql15-jit postgresql15-client bash inotify-tools
 # 安装依赖
 RUN rm -rf /var/cache/apk/*
 # 设置时区
