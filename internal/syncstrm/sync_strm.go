@@ -32,6 +32,11 @@ func (s *SyncStrm) ProcessStrmFile(sf *SyncFileCache) error {
 	// localFilePath := sf.GetLocalFilePath()
 	strmFullPath := sf.GetLocalFilePath(s.TargetPath, s.SourcePath)
 	strmContent := s.SyncDriver.MakeStrmContent(sf)
+	if strmContent == "" {
+		s.Sync.Logger.Errorf("生成strm文件内容失败，可能是STRM直连地址格式不正确: %s", filepath.Join(sf.Path, sf.FileName))
+		return fmt.Errorf("生成strm文件内容失败")
+	}
+
 	// 写入文件并设置所有者
 	err := helpers.WriteFileWithPerm(strmFullPath, []byte(strmContent), 0777)
 	if err != nil {

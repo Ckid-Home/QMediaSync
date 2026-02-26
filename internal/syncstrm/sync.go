@@ -159,6 +159,10 @@ func NewSyncStrmFromSyncPath(syncPath *models.SyncPath) *SyncStrm {
 	} else {
 		account = &models.Account{SourceType: models.SourceTypeLocal}
 	}
+	if (account.SourceType == models.SourceType115 || account.SourceType == models.SourceTypeBaiduPan) && syncPath.GetStrmBaseUrl() == "" {
+		helpers.AppLogger.Errorf("115或百度网盘同步路径 %s 未配置STRM直连地址", syncPath.RemotePath)
+		return nil
+	}
 	config := SyncStrmConfig{
 		EnableDownloadMeta:    int64(syncPath.GetDownloadMeta()),
 		MinVideoSize:          syncPath.GetMinVideoSize(),
@@ -331,6 +335,10 @@ func (s *SyncStrm) processNetFile(file *SyncFileCache) error {
 	}
 	if file.IsVideo {
 		// s.Sync.Logger.Infof("正在处理视频文件 %s", file.FileId)
+		if strings.Contains(file.Path, "**") {
+			s.Sync.Logger.Infof("文件ID %s 所在目录 %s 包含 ** 号，跳过生成strm", file.FileId, file.Path)
+			return nil
+		}
 		return s.ProcessStrmFile(file)
 	}
 	// 再处理元数据文件
@@ -338,6 +346,11 @@ func (s *SyncStrm) processNetFile(file *SyncFileCache) error {
 		if !helpers.PathExists(localFilePath) {
 			// 如果文件不存在，则判断是否需要下载，使用strm设置
 			if s.Config.EnableDownloadMeta == 1 {
+				// 检查目录是否合规
+				if strings.Contains(file.Path, "**") {
+					s.Sync.Logger.Infof("文件ID %s 所在目录 %s 包含 ** 号，跳过下载", file.FileId, file.Path)
+					return nil
+				}
 				// 允许下载，添加到下载列表
 				s.AddDownloadTaskTemp(file)
 				// err := models.AddDownloadTaskFromSyncFile(file)

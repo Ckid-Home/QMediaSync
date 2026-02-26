@@ -67,7 +67,7 @@ func (s *SyncStrm) process115Path(ctx context.Context, pathId string) error {
 		// 如果失败，则中断所有任务
 		return fsErr
 	}
-	if strings.Contains(detail.FileName, "***") {
+	if strings.Contains(detail.FileName, "**") {
 		s.Sync.Logger.Infof("目录ID %s 名称：%s 包含 *** 号，跳过", pathId, detail.FileName)
 		return nil
 	}

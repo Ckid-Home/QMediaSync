@@ -209,7 +209,7 @@ func isSafePath(base, path string) bool {
 	if err != nil {
 		return false
 	}
-	return rel != ".." && !filepath.IsAbs(rel) && rel[:2] != ".."
+	return rel != ".." && !filepath.IsAbs(rel) && (len(rel) < 2 || rel[:2] != "..")
 }
 
 // 将src目录内的所有文件打包成zip文件(dst)
