@@ -152,14 +152,14 @@ func (m *EmbeddedManager) InitDataDir() error {
 		// windows无需修改权限
 		return nil
 	}
-	// exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), postgresRoot).Run() // 设置目录所有者为qms:qms
-	// helpers.AppLogger.Infof("设置Postgres目录 %s 所有者为%s:%s成功", postgresRoot, m.UserName, m.GroupName)
-	// exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), m.config.DataDir).Run()
-	// helpers.AppLogger.Infof("设置Postgres数据目录 %s 所有者为%s:%s成功", m.config.DataDir, m.UserName, m.GroupName)
-	// exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), logDir).Run()
-	// helpers.AppLogger.Infof("设置Postgres日志目录 %s 所有者为%s:%s成功", logDir, m.UserName, m.GroupName)
-	// exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), tmpDir).Run()
-	// helpers.AppLogger.Infof("设置Postgres临时目录 %s 所有者为%s:%s成功", tmpDir, m.UserName, m.GroupName)
+	exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), postgresRoot).Run() // 设置目录所有者为qms:qms
+	helpers.AppLogger.Infof("设置Postgres目录 %s 所有者为%s:%s成功", postgresRoot, m.UserName, m.GroupName)
+	exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), m.config.DataDir).Run()
+	helpers.AppLogger.Infof("设置Postgres数据目录 %s 所有者为%s:%s成功", m.config.DataDir, m.UserName, m.GroupName)
+	exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), logDir).Run()
+	helpers.AppLogger.Infof("设置Postgres日志目录 %s 所有者为%s:%s成功", logDir, m.UserName, m.GroupName)
+	exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), tmpDir).Run()
+	helpers.AppLogger.Infof("设置Postgres临时目录 %s 所有者为%s:%s成功", tmpDir, m.UserName, m.GroupName)
 	return nil
 }
 
@@ -257,8 +257,11 @@ max_parallel_workers = 8
 	if err := os.WriteFile(confPath, []byte(strings.TrimSpace(confContent)), 0750); err != nil {
 		return fmt.Errorf("写入 postgresql.conf 失败: %v", err)
 	}
-	// 改变所有者
-	os.Chown(confPath, 12331, 12331) // 设置文件所有者为12331:12331
+	if runtime.GOOS != "windows" {
+		// 改变所有者
+		exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), confPath).Run()
+		helpers.AppLogger.Infof("设置Postgres配置文件 %s 所有者为%s:%s成功", confPath, m.UserName, m.GroupName)
+	}
 	// 配置 pg_hba.conf（保持不变）
 	hbaPath := filepath.Join(m.config.DataDir, "pg_hba.conf")
 	hbaContent := `
@@ -270,9 +273,10 @@ host    all             all             ::1/128                 trust
 	if err := os.WriteFile(hbaPath, []byte(strings.TrimSpace(hbaContent)), 0750); err != nil {
 		return fmt.Errorf("写入 pg_hba.conf 失败: %v", err)
 	}
-	if helpers.Guid == "" && runtime.GOOS != "windows" {
+	if runtime.GOOS != "windows" {
 		// 改变所有者
 		exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), hbaPath).Run()
+		helpers.AppLogger.Infof("设置Postgres HBA文件 %s 所有者为%s:%s成功", hbaPath, m.UserName, m.GroupName)
 	}
 
 	helpers.AppLogger.Infof("PostgreSQL 配置完成，共享内存类型: %s", sharedMemoryType)

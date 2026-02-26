@@ -83,7 +83,7 @@ func (u *UserSwitcher) RunCommandAsUserWithEnv(env map[string]string, command st
 	// 构建环境变量字符串
 	var err error
 	var cmd *exec.Cmd
-	if u.username == "" || runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" {
 		// 先设置环境变量
 		for key, value := range env {
 			os.Setenv(key, value)
