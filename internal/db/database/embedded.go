@@ -221,21 +221,12 @@ unix_socket_directories = '%s'
 # 日志配置
 log_destination = 'stderr'
 logging_collector = on
-// log_directory = '%s'
-// log_filename = 'postgres.log'
 log_file_mode = 0644
 log_rotation_age = 1d
 log_rotation_size = 10MB
 log_truncate_on_rotation = on
 log_min_error_statement = error
 log_min_duration_statement = -1
-// log_checkpoints = on
-// log_connections = on
-// log_disconnections = on
-// log_duration = on
-// log_line_prefix = '%%t [%%p]: [%%l-1] user=%%u,db=%%d,app=%%a,client=%%h '
-// log_timezone = 'UTC'
-// log_autovacuum_min_duration = 0
 
 # 性能相关
 wal_level = replica
