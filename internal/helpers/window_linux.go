@@ -3,6 +3,11 @@
 
 package helpers
 
+import (
+	"os/exec"
+	"runtime"
+)
+
 var ExitChan chan struct{} = make(chan struct{})
 var IsFirstRun bool = false // 默认为 false
 
@@ -20,5 +25,14 @@ func IsProcessAlive(pid int) (bool, error) {
 }
 
 func OpenBrowser(url string) error {
-	return nil
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+
+	return cmd.Start()
 }

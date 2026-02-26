@@ -126,17 +126,9 @@ func exitApp() {
 
 func OpenBrowser(url string) error {
 	var cmd *exec.Cmd
-
-	switch runtime.GOOS {
-	case "windows":
-		// 使用 cmd /c start 虽然方便，但必须设置 HideWindow
-		cmd = exec.Command("cmd", "/c", "start", url)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true} // 关键：隐藏子进程窗口
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
+	// 使用 cmd /c start 虽然方便，但必须设置 HideWindow
+	cmd = exec.Command("cmd", "/c", "start", url)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true} // 关键：隐藏子进程窗口
 
 	return cmd.Start()
 }
