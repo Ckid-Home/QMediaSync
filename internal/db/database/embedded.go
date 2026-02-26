@@ -128,7 +128,12 @@ func (m *EmbeddedManager) InitDataDir() error {
 		helpers.AppLogger.Infof("删除Postgres postmaster.pid 文件 %s 成功", postmasterFile)
 	}
 	logDir := filepath.Join(postgresRoot, "log")
-	if !helpers.PathExists(logDir) {
+	if helpers.PathExists(logDir) {
+		// 删除掉日志文件
+		if err := os.RemoveAll(logDir); err != nil {
+			return err
+		}
+		helpers.AppLogger.Infof("删除Postgres日志目录 %s 成功", logDir)
 		if err := os.MkdirAll(logDir, 0750); err != nil {
 			return err
 		}
@@ -147,14 +152,14 @@ func (m *EmbeddedManager) InitDataDir() error {
 		// windows无需修改权限
 		return nil
 	}
-	exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), postgresRoot).Run() // 设置目录所有者为qms:qms
-	helpers.AppLogger.Infof("设置Postgres目录 %s 所有者为%s:%s成功", postgresRoot, m.UserName, m.GroupName)
-	exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), m.config.DataDir).Run()
-	helpers.AppLogger.Infof("设置Postgres数据目录 %s 所有者为%s:%s成功", m.config.DataDir, m.UserName, m.GroupName)
-	exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), logDir).Run()
-	helpers.AppLogger.Infof("设置Postgres日志目录 %s 所有者为%s:%s成功", logDir, m.UserName, m.GroupName)
-	exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), tmpDir).Run()
-	helpers.AppLogger.Infof("设置Postgres临时目录 %s 所有者为%s:%s成功", tmpDir, m.UserName, m.GroupName)
+	// exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), postgresRoot).Run() // 设置目录所有者为qms:qms
+	// helpers.AppLogger.Infof("设置Postgres目录 %s 所有者为%s:%s成功", postgresRoot, m.UserName, m.GroupName)
+	// exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), m.config.DataDir).Run()
+	// helpers.AppLogger.Infof("设置Postgres数据目录 %s 所有者为%s:%s成功", m.config.DataDir, m.UserName, m.GroupName)
+	// exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), logDir).Run()
+	// helpers.AppLogger.Infof("设置Postgres日志目录 %s 所有者为%s:%s成功", logDir, m.UserName, m.GroupName)
+	// exec.Command("chown", "-R", fmt.Sprintf("%s:%s", m.UserName, m.GroupName), tmpDir).Run()
+	// helpers.AppLogger.Infof("设置Postgres临时目录 %s 所有者为%s:%s成功", tmpDir, m.UserName, m.GroupName)
 	return nil
 }
 
@@ -214,23 +219,23 @@ dynamic_shared_memory_type = %s
 unix_socket_directories = '%s'
 
 # 日志配置
-log_destination = 'stderr'
-logging_collector = on
-log_directory = '%s'
-log_filename = 'postgres.log'
-log_file_mode = 0644
-log_rotation_age = 1d
-log_rotation_size = 100MB
-log_truncate_on_rotation = on
-log_min_error_statement = error
-log_min_duration_statement = -1
-log_checkpoints = on
-log_connections = on
-log_disconnections = on
-log_duration = on
-log_line_prefix = '%%t [%%p]: [%%l-1] user=%%u,db=%%d,app=%%a,client=%%h '
-log_timezone = 'UTC'
-log_autovacuum_min_duration = 0
+// log_destination = 'stderr'
+// logging_collector = on
+// log_directory = '%s'
+// log_filename = 'postgres.log'
+// log_file_mode = 0644
+// log_rotation_age = 1d
+// log_rotation_size = 100MB
+// log_truncate_on_rotation = on
+// log_min_error_statement = error
+// log_min_duration_statement = -1
+// log_checkpoints = on
+// log_connections = on
+// log_disconnections = on
+// log_duration = on
+// log_line_prefix = '%%t [%%p]: [%%l-1] user=%%u,db=%%d,app=%%a,client=%%h '
+// log_timezone = 'UTC'
+// log_autovacuum_min_duration = 0
 
 # 性能相关
 wal_level = replica
@@ -247,7 +252,7 @@ effective_cache_size = 1GB
 max_worker_processes = 8
 max_parallel_workers_per_gather = 2
 max_parallel_workers = 8
-`, m.config.Host, m.config.Port, sharedMemoryType, m.formatPathForPostgres(m.config.DataDir), m.formatPathForPostgres(m.config.LogDir))
+`, m.config.Host, m.config.Port, sharedMemoryType, m.formatPathForPostgres(m.config.DataDir))
 
 	if err := os.WriteFile(confPath, []byte(strings.TrimSpace(confContent)), 0750); err != nil {
 		return fmt.Errorf("写入 postgresql.conf 失败: %v", err)
@@ -287,6 +292,7 @@ func (m *EmbeddedManager) startPostgresProcess() error {
 			"PGPORT": fmt.Sprintf("%d", m.config.Port),
 		},
 		postgresPath, "start", "-D", m.config.DataDir, fmt.Sprintf("-o \"-k %s\"", tmpPath),
+		fmt.Sprintf("> %s", filepath.Join(m.config.LogDir, "postgres.log")),
 	)
 	// pg_ctl start -D /app/config/postgres/data -o "-k /app/config/postgres/tmp -c unix_socket_directories='/app/config/postgres/tmp'"
 	// su - qms -c "postgres -D /app/config/postgres/data -k /app/config/postgres/tmp -c unix_socket_directories='/app/config/postgres/tmp'"
@@ -319,7 +325,7 @@ func (m *EmbeddedManager) waitForPostgres(ctx context.Context) error {
 				pgIsReadyPath = filepath.Join(m.config.BinaryPath, "pg_isready.exe")
 			}
 			cmd := exec.Command(pgIsReadyPath, "-h", m.config.Host, "-p",
-				fmt.Sprintf("%d", m.config.Port), "-U", m.config.User)
+				fmt.Sprintf("%d", m.config.Port), "-U", m.config.User, fmt.Sprintf(" >> %s", filepath.Join(m.config.LogDir, "postgres.log")))
 			if err := cmd.Run(); err == nil {
 				helpers.AppLogger.Info("PostgreSQL 已就绪")
 				return nil
