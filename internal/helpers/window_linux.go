@@ -18,3 +18,7 @@ func StartNewProcess(exePath, updateDir string) bool {
 func IsProcessAlive(pid int) (bool, error) {
 	return true, nil
 }
+
+func OpenBrowser(url string) error {
+	return nil
+}

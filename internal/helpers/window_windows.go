@@ -56,7 +56,7 @@ func startWindow() {
 		go func() {
 			// 第一次启动建议多等一会儿，因为数据库初始化需要时间
 			time.Sleep(5 * time.Second)
-			openBrowser("http://127.0.0.1:12333")
+			OpenBrowser("http://127.0.0.1:12333")
 			// 启动完后重置，防止程序内部逻辑错误（可选）
 			IsFirstRun = false
 		}()
@@ -93,7 +93,7 @@ func setupFullFeaturedTray(parent walk.Form, stopFunc func()) error {
 	openWebAction.SetText("打开控制面板")
 	openWebAction.Triggered().Attach(func() {
 		// 这里直接调用你已经写好的 openBrowser 函数
-		openBrowser("http://127.0.0.1:12333")
+		OpenBrowser("http://127.0.0.1:12333")
 	})
 	// 将该项加入右键菜单
 	if err := notifyIcon.ContextMenu().Actions().Add(openWebAction); err != nil {
@@ -124,7 +124,7 @@ func exitApp() {
 	walk.App().Exit(0)
 }
 
-func openBrowser(url string) error {
+func OpenBrowser(url string) error {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {

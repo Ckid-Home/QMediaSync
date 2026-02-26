@@ -1012,6 +1012,11 @@ func StartConfigWebServer() {
 	})
 
 	fmt.Printf("配置服务已启动，请在浏览器中访问: http://ip:12333\n")
+	go func() {
+		// 第一次启动建议多等一会儿，因为数据库初始化需要时间
+		time.Sleep(2 * time.Second)
+		helpers.OpenBrowser("http://127.0.0.1:12333")
+	}()
 	if err := r.Run(":12333"); err != nil {
 		log.Fatalf("启动配置服务失败: %v", err)
 	}
