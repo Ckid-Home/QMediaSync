@@ -320,6 +320,8 @@ func (m *EmbeddedManager) waitForPostgres(ctx context.Context) error {
 			}
 			cmd := exec.Command(pgIsReadyPath, "-h", m.config.Host, "-p",
 				fmt.Sprintf("%d", m.config.Port), "-U", m.config.User)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err == nil {
 				helpers.AppLogger.Info("PostgreSQL 已就绪")
 				return nil
