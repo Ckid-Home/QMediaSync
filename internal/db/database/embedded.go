@@ -109,13 +109,13 @@ func (m *EmbeddedManager) InitDataDir() error {
 	postgresRoot := filepath.Dir(m.config.DataDir)
 	if !helpers.PathExists(postgresRoot) {
 		// 如果没有config/postgres目录则创建
-		if err := os.MkdirAll(postgresRoot, 0750); err != nil {
+		if err := os.MkdirAll(postgresRoot, 4750); err != nil {
 			return err
 		}
 		helpers.AppLogger.Infof("创建Postgres目录 %s 成功", postgresRoot)
 	}
 	if !helpers.PathExists(m.config.DataDir) {
-		if err := os.MkdirAll(m.config.DataDir, 0750); err != nil {
+		if err := os.MkdirAll(m.config.DataDir, 4750); err != nil {
 			return err
 		}
 		helpers.AppLogger.Infof("创建Postgres数据目录 %s 成功", m.config.DataDir)
@@ -134,14 +134,14 @@ func (m *EmbeddedManager) InitDataDir() error {
 			return err
 		}
 		helpers.AppLogger.Infof("删除Postgres日志目录 %s 成功", logDir)
-		if err := os.MkdirAll(logDir, 0750); err != nil {
+		if err := os.MkdirAll(logDir, 4750); err != nil {
 			return err
 		}
 		helpers.AppLogger.Infof("创建Postgres日志目录 %s 成功", logDir)
 	}
 	tmpDir := filepath.Join(postgresRoot, "tmp")
 	if !helpers.PathExists(tmpDir) {
-		if err := os.MkdirAll(tmpDir, 0750); err != nil {
+		if err := os.MkdirAll(tmpDir, 4750); err != nil {
 			return err
 		}
 		helpers.AppLogger.Infof("创建Postgres临时目录 %s 成功", tmpDir)
@@ -245,7 +245,7 @@ max_parallel_workers_per_gather = 2
 max_parallel_workers = 8
 `, m.config.Host, m.config.Port, sharedMemoryType, m.formatPathForPostgres(m.config.DataDir))
 
-	if err := os.WriteFile(confPath, []byte(strings.TrimSpace(confContent)), 0750); err != nil {
+	if err := os.WriteFile(confPath, []byte(strings.TrimSpace(confContent)), 4750); err != nil {
 		return fmt.Errorf("写入 postgresql.conf 失败: %v", err)
 	}
 	if runtime.GOOS != "windows" && m.UserName != "" {
@@ -261,7 +261,7 @@ local   all             all                                     trust
 host    all             all             127.0.0.1/32            trust
 host    all             all             ::1/128                 trust
 `
-	if err := os.WriteFile(hbaPath, []byte(strings.TrimSpace(hbaContent)), 0750); err != nil {
+	if err := os.WriteFile(hbaPath, []byte(strings.TrimSpace(hbaContent)), 4750); err != nil {
 		return fmt.Errorf("写入 pg_hba.conf 失败: %v", err)
 	}
 	if runtime.GOOS != "windows" && m.UserName != "" {
@@ -320,6 +320,7 @@ func (m *EmbeddedManager) waitForPostgres(ctx context.Context) error {
 			}
 			cmd := exec.Command(pgIsReadyPath, "-h", m.config.Host, "-p",
 				fmt.Sprintf("%d", m.config.Port), "-U", m.config.User)
+			helpers.AppLogger.Infof("执行命令: %s", cmd.String())
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err == nil {

@@ -1,7 +1,7 @@
 package database
 
 import (
-	"Q115-STRM/emby302/util/logs"
+	"Q115-STRM/internal/helpers"
 	"fmt"
 	"os"
 	"os/exec"
@@ -72,9 +72,10 @@ func (u *UserSwitcher) RunCommandAsUserWithEnv(env map[string]string, command st
 		}
 		fullCommand := envVars + command + " " + strings.Join(args, " ")
 		fullArgs := []string{"-", u.username, "-c", fullCommand}
-		logs.Info(fmt.Sprintf("以用户 %s 执行命令: %s", u.username, fullCommand))
+		// logs.Info(fmt.Sprintf("以用户 %s 执行命令: %s", u.username, fullCommand))
 		cmd = exec.Command("su", fullArgs...)
 	}
+	helpers.AppLogger.Infof("执行命令: %s", cmd.String())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Start()
