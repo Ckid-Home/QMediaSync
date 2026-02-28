@@ -267,6 +267,9 @@ func Backup(backupType string, reason string) error {
 	if err := backupToJsonFile(backupRecordDir, "NotificationRule", totalTable, &count, models.NotificationRule{}); err != nil {
 		return err
 	}
+	if err := backupToJsonFile(backupRecordDir, "SyncPathScrapePath", totalTable, &count, models.SyncPathScrapePath{}); err != nil {
+		return err
+	}
 
 	if err := backupToJsonFile(backupRecordDir, "Migrator", totalTable, &count, models.Migrator{}); err != nil {
 		return err

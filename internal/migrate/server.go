@@ -265,6 +265,9 @@ func (s *MigrateServer) performMigrateBackup() error {
 	if err := backupToJsonFile(backupRecordDir, "NotificationRule", totalTable, &count, models.NotificationRule{}); err != nil {
 		return err
 	}
+	if err := backupToJsonFile(backupRecordDir, "SyncPathScrapePath", totalTable, &count, models.SyncPathScrapePath{}); err != nil {
+		return err
+	}
 	if err := backupToJsonFile(backupRecordDir, "Migrator", totalTable, &count, models.Migrator{}); err != nil {
 		return err
 	}
@@ -295,7 +298,7 @@ func backupToJsonFile[T any](backupDir string, modelName string, totalTable int,
 		var records []T
 		if err := db.Db.Model(&model).Offset(page * pageSize).Limit(pageSize).Find(&records).Error; err != nil {
 			helpers.AppLogger.Errorf("查询%s失败: %v", modelName, err)
-			return err
+			break
 		}
 		if len(records) == 0 {
 			helpers.AppLogger.Infof("查询%s完成", modelName)
@@ -336,7 +339,7 @@ func (s *MigrateServer) handleTestDB(c *gin.Context) {
 		return
 	}
 
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=disable",
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=disable connect_timeout=5",
 		req.Host, req.Port, req.User, req.Password)
 	sqlDB, err := sql.Open("postgres", connStr)
 	if err != nil {

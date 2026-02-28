@@ -148,6 +148,9 @@ func Restore(filePath string) error {
 	if err := restoreFromJsonFile(tempDir, "NotificationRule", totalTable, &count, models.NotificationRule{}); err != nil {
 		return err
 	}
+	if err := restoreFromJsonFile(tempDir, "SyncPathScrapePath", totalTable, &count, models.SyncPathScrapePath{}); err != nil {
+		return err
+	}
 
 	if err := restoreFromJsonFile(tempDir, "Migrator", totalTable, &count, models.Migrator{}); err != nil {
 		return err
