@@ -383,7 +383,7 @@ func BatchCreateTable() error {
 	if err != nil {
 		lastErr = err
 	}
-	err = db.Db.AutoMigrate(SyncFile{})
+	err = db.Db.AutoMigrate(SyncFile{}, SyncPathScrapePath{})
 	if err != nil {
 		lastErr = err
 	}
