@@ -231,6 +231,8 @@ func (s *SyncStrm) Start() error {
 		// 生成SyncFileCache
 
 		// 验证文件有效性
+
+		// 生成strm
 	} else {
 		newPathId, err := s.SyncDriver.GetPathIdByPath(s.Context, s.SourcePath)
 		if err != nil {

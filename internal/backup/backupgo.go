@@ -79,8 +79,12 @@ func stopAllTasks() error {
 	if synccron.GlobalCron != nil {
 		synccron.GlobalCron.Stop()
 	}
-	models.GlobalDownloadQueue.Stop()
-	models.GlobalUploadQueue.Stop()
+	if models.GlobalDownloadQueue != nil {
+		models.GlobalDownloadQueue.Stop()
+	}
+	if models.GlobalUploadQueue != nil {
+		models.GlobalUploadQueue.Stop()
+	}
 	emby.SetEmbySyncRunning(true)
 	return nil
 }
@@ -89,8 +93,12 @@ func startAllTasks() error {
 	synccron.ResumeAllNewSyncQueues()
 	synccron.InitSyncCron()
 	synccron.InitSyncCron()
-	models.GlobalDownloadQueue.Start()
-	models.GlobalUploadQueue.Start()
+	if models.GlobalDownloadQueue != nil {
+		models.GlobalDownloadQueue.Start()
+	}
+	if models.GlobalUploadQueue != nil {
+		models.GlobalUploadQueue.Start()
+	}
 	emby.SetEmbySyncRunning(false)
 	return nil
 }

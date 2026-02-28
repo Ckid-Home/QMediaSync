@@ -9,10 +9,12 @@ import (
 	"Q115-STRM/internal/db"
 	"Q115-STRM/internal/db/database"
 	"Q115-STRM/internal/helpers"
+	"Q115-STRM/internal/migrate"
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/synccron"
 	"Q115-STRM/internal/v115open"
 	"context"
+	"database/sql"
 	"embed"
 	"flag"
 	"fmt"
@@ -159,7 +161,7 @@ func (app *App) StartHttpServer(r *gin.Engine) {
 	}()
 }
 
-func (app *App) StartDatabase() error {
+func (app *App) StartDatabase(migrateMode bool) error {
 	defer models.Migrate()
 	// 根据配置启动数据库连接
 	if helpers.GlobalConfig.Db.Engine == helpers.DbEngineSqlite {
@@ -196,6 +198,16 @@ func (app *App) StartDatabase() error {
 			return err
 		}
 		db.InitPostgres(app.dbManager.GetDB())
+
+		// 如果是迁移模式，启动迁移服务
+		if migrateMode {
+			helpers.AppLogger.Info("检测到使用内嵌PostgreSQL，启动迁移服务...")
+			migrateServer := migrate.NewMigrateServer(app.dbManager, dbConfig)
+			if err := migrateServer.Start(); err != nil {
+				helpers.AppLogger.Errorf("启动迁移服务失败: %v", err)
+				return err
+			}
+		}
 	} else {
 		// 初始化PostgreSQL数据库连接
 		if err := db.ConnectPostgres(dbConfig); err != nil {
@@ -325,7 +337,12 @@ func getDataAndConfigDir() {
 
 //go:embed emby302.yml
 //go:embed assets/db_config.html
+//go:embed assets/migrate.html
 var embedFiles embed.FS
+
+func init() {
+	migrate.SetMigrateFiles(embedFiles)
+}
 
 func startEmby302() {
 	dataRoot := helpers.ConfigDir
@@ -715,10 +732,38 @@ func initEnv() bool {
 	// 创建App
 	newApp()
 	helpers.AppLogger.Infof("当前版本号:%s, 发布日期:%s\n", Version, PublishDate)
-	if err := QMSApp.StartDatabase(); err != nil {
-		log.Println("数据库启动失败:", err)
-		return false
+
+	// 检查是否需要自动恢复
+	if migrate.ShouldRestore() {
+		helpers.AppLogger.Info("检测到迁移备份文件存在且使用外部PostgreSQL，开始自动恢复...")
+		// 先启动外部数据库连接
+		if err := QMSApp.StartDatabase(false); err != nil {
+			log.Println("数据库启动失败:", err)
+			return false
+		}
+		// 执行恢复
+		backupPath := migrate.GetMigrateBackupPath()
+		if err := performMigrateRestore(backupPath); err != nil {
+			helpers.AppLogger.Errorf("恢复数据失败: %v", err)
+			return false
+		}
+		// 恢复成功，删除备份文件
+		os.Remove(backupPath)
+		helpers.AppLogger.Info("数据恢复完成，已删除迁移备份文件")
+	} else {
+		// 检查是否需要启动迁移服务
+		needMigrate := migrate.ShouldMigrate()
+		// needMigrate := false
+		if err := QMSApp.StartDatabase(needMigrate); err != nil {
+			log.Println("数据库启动失败:", err)
+			return false
+		}
+		// 如果启动了迁移服务，则直接返回false（迁移服务会自己处理退出）
+		if needMigrate {
+			return false
+		}
 	}
+
 	db.InitCache() // 初始化内存缓存
 	initOthers()
 	return true
@@ -939,6 +984,21 @@ func isInRestrictedDirectory() (bool, string) {
 	return false, ""
 }
 
+func performMigrateRestore(backupPath string) error {
+	helpers.AppLogger.Infof("开始从迁移备份恢复: %s", backupPath)
+
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		return fmt.Errorf("备份文件不存在: %s", backupPath)
+	}
+
+	if err := backup.Restore(backupPath); err != nil {
+		return fmt.Errorf("恢复失败: %v", err)
+	}
+
+	helpers.AppLogger.Info("迁移恢复完成")
+	return nil
+}
+
 func StartConfigWebServer() {
 	if helpers.IsRelease {
 		gin.SetMode(gin.ReleaseMode)
@@ -959,24 +1019,62 @@ func StartConfigWebServer() {
 			"title":        "数据库配置",
 			"isRestricted": isRestricted,
 			"warningMsg":   warningMsg,
+			"isWindows":    runtime.GOOS == "windows",
 		})
+	})
+
+	r.POST("/api/config/test-db", func(c *gin.Context) {
+		var req struct {
+			Host     string `json:"host"`
+			Port     int    `json:"port"`
+			User     string `json:"user"`
+			Password string `json:"password"`
+			Database string `json:"database"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"success": false, "error": err.Error()})
+			return
+		}
+
+		connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=disable",
+			req.Host, req.Port, req.User, req.Password)
+		sqlDB, err := sql.Open("postgres", connStr)
+		if err != nil {
+			c.JSON(200, gin.H{"success": false, "error": "连接失败: " + err.Error()})
+			return
+		}
+		defer sqlDB.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := sqlDB.PingContext(ctx); err != nil {
+			c.JSON(200, gin.H{"success": false, "error": "连接失败: " + err.Error()})
+			return
+		}
+
+		c.JSON(200, gin.H{"success": true, "message": "数据库连接成功"})
 	})
 
 	r.POST("/api/config/save", func(c *gin.Context) {
 		var req struct {
-			Engine       string `json:"engine"`
-			PostgresType string `json:"postgresType"`
-			Host         string `json:"host"`
-			Port         int    `json:"port"`
-			User         string `json:"user"`
-			Password     string `json:"password"`
-			Database     string `json:"database"`
+			Engine        string `json:"engine"`
+			PostgresType  string `json:"postgresType"`
+			Host          string `json:"host"`
+			Port          int    `json:"port"`
+			User          string `json:"user"`
+			Password      string `json:"password"`
+			Database      string `json:"database"`
+			AdminUsername string `json:"adminUsername"`
+			AdminPassword string `json:"adminPassword"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
 		yamlConfig := helpers.MakeDefaultConfig()
+		yamlConfig.AdminUsername = req.AdminUsername
+		yamlConfig.AdminPassword = req.AdminPassword
 		if req.Engine == string(helpers.DbEnginePostgres) {
 			yamlConfig.Db.PostgresType = helpers.PostgresType(req.PostgresType)
 			if req.PostgresType == string(helpers.PostgresTypeExternal) {

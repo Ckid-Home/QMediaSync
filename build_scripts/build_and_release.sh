@@ -191,11 +191,11 @@ for platform in "${PLATFORMS[@]}"; do
         fi
         
         # PostgreSQL binaries
-        POSTGRES_PATH="postgres/$platform/$arch"
-        if [ -d "$POSTGRES_PATH" ]; then
-            mkdir -p "temp_build/$ARCHIVE_NAME/postgres/$platform/$arch"
-            cp -r "$POSTGRES_PATH/"* "temp_build/$ARCHIVE_NAME/postgres/$platform/$arch/" 2>/dev/null || true
-        fi
+        # POSTGRES_PATH="postgres/$platform/$arch"
+        # if [ -d "$POSTGRES_PATH" ]; then
+        #     mkdir -p "temp_build/$ARCHIVE_NAME/postgres/$platform/$arch"
+        #     cp -r "$POSTGRES_PATH/"* "temp_build/$ARCHIVE_NAME/postgres/$platform/$arch/" 2>/dev/null || true
+        # fi
         
         # Create archive
         if [ "$platform" = "windows" ]; then

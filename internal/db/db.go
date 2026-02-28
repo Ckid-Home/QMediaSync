@@ -147,11 +147,22 @@ func InitPostgres(sqlDB *sql.DB) {
 	sqlDB.SetConnMaxLifetime(60 * time.Minute) // 连接最多使用5分钟
 	sqlDB.SetConnMaxIdleTime(1 * time.Minute)  // 空闲超过10秒则关闭
 	var err error
-	Db, err = gorm.Open(postgres.New(postgres.Config{
-		Conn: sqlDB,
-	}), &gorm.Config{})
+	maxRetries := 3
+	for i := 0; i < maxRetries; i++ {
+		Db, err = gorm.Open(postgres.New(postgres.Config{
+			Conn: sqlDB,
+		}), &gorm.Config{})
+		if err == nil {
+			break
+		}
+		helpers.AppLogger.Warnf("数据库连接失败(第%d次): %v", i+1, err)
+		if i < maxRetries-1 {
+			time.Sleep(3 * time.Second)
+		}
+	}
 	if err != nil {
-		panic(fmt.Sprintf("failed to connect database: %v", err))
+		helpers.AppLogger.Errorf("重试 %d 次后依然无法连接数据库，错误: %v", maxRetries, err)
+		panic(fmt.Sprintf("重试 %d 次后依然无法连接数据库，错误: %v", maxRetries, err))
 	}
 	// 设置全局Logger
 	Db.Logger = newLogger

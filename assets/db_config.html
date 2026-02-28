@@ -222,55 +222,65 @@
 
         <div id="message" class="message"></div>
 
-        <div id="step-engine" class="step active">
-            <p class="subtitle">请选择数据库引擎：</p>
+        <div id="step-admin" class="step active">
+            <p class="subtitle">请设置管理员账号：</p>
+            <div class="form-group">
+                <label for="adminUsername">管理员用户名</label>
+                <input type="text" id="adminUsername" value="admin">
+            </div>
+            <div class="form-group">
+                <label for="adminPassword">管理员密码</label>
+                <input type="password" id="adminPassword" placeholder="输入密码">
+            </div>
+            <div class="form-group">
+                <label for="adminPasswordConfirm">确认密码</label>
+                <input type="password" id="adminPasswordConfirm" placeholder="再次输入密码">
+            </div>
             <div class="btn-group">
-                <button class="btn" onclick="selectEngine('sqlite')">SQLite</button>
-                <p style="font-size: 16px; color: #333; text-align: center; margin-top: -8px;">最简单的方案，无需配置，Windows 建议选择。如果你看不懂这两个选项，一定选这个。</p>
-                <button class="btn" onclick="selectEngine('postgres')">PostgreSQL</button>
-                <p style="font-size: 16px; color: #333; text-align: center; margin-top: -8px;">需要启动一个独立的数据库服务器，可以使用内嵌版本或独立安装</p>
+                <button class="btn" onclick="goToEngineSelect()">下一步</button>
             </div>
         </div>
 
-        <div id="step-postgres-type" class="step">
-            <p class="subtitle">请选择 PostgreSQL 类型：</p>
+        <div id="step-engine" class="step">
+            <p class="subtitle">请选择数据库引擎：</p>
             <div class="btn-group">
-                <button class="btn" onclick="selectPostgresType('embedded')">嵌入式 (Embedded)</button>
-                <p style="font-size: 16px; color: #333; text-align: center; margin-top: -8px;">只有 Windows 和 Docker 版本提供，使用 QMediaSync 内置的 PostgreSQL，无需自己安装，但可能出现无法启动等问题</p>
-                <button class="btn" onclick="selectPostgresType('external')">外部连接 (External)</button>
-                <p style="font-size: 16px; color: #333; text-align: center; margin-top: -8px;">如果你有已经安装好的 PostgreSQL，Docker容器或者直接安装或者远程服务器均可，请在下一个页面输入连接信息直接使用</p>
-                <button class="btn btn-back" onclick="goBack('engine')">返回</button>
+                <button class="btn" onclick="selectEngine('sqlite')">SQLite</button>
+                <p style="font-size: 16px; color: #333; text-align: center; margin-top: -8px;">最简单的方案，无需配置，Windows 或者 飞牛应用 建议选择，但是读写频繁时容易锁库，出现掉授权等现象。</p>
+                <button class="btn" onclick="selectEngine('postgres')">PostgreSQL</button>
+                <p style="font-size: 16px; color: #333; text-align: center; margin-top: -8px;">需要启动一个独立的数据库服务器，强烈建议使用该选项，不懂就按照教程安装。</p>
+                <button class="btn btn-back" onclick="goBack('admin')">返回</button>
             </div>
         </div>
 
         <div id="step-postgres-config" class="step">
             <p class="subtitle">请输入 PostgreSQL 外部连接信息：</p>
-            <p style="font-size: 16px; color: #333; text-align: center; margin-bottom: 20px;">请提前创建输入的数据库，并给输入的用户所有该库的权限</p>
+            <p style="font-size: 16px; color: #333; text-align: center; margin-bottom: 20px;">一定要输入超级管理员用户名和密码，程序会自动创建指定的数据库</p>
             <div class="form-group">
                 <label for="host">主机地址</label>
-                <input type="text" id="host" value="localhost">
+                <input type="text" id="host" value="{{ if .isWindows }}localhost{{ else }}postgres{{ end }}" oninput="onInputChanged()">
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="port">端口</label>
-                    <input type="number" id="port" value="5432">
+                    <input type="number" id="port" value="5432" oninput="onInputChanged()">
                 </div>
             </div>
             <div class="form-group">
                 <label for="user">用户名</label>
-                <input type="text" id="user" placeholder="postgres">
+                <input type="text" id="user" placeholder="postgres" value="postgres" oninput="onInputChanged()">
             </div>
             <div class="form-group">
                 <label for="password">密码</label>
-                <input type="password" id="password" placeholder="输入密码">
+                <input type="password" id="password" placeholder="输入密码" value="123123" oninput="onInputChanged()">
             </div>
             <div class="form-group">
                 <label for="database">数据库名</label>
-                <input type="text" id="database" value="qmediasync">
+                <input type="text" id="database" value="qmediasync" oninput="onInputChanged()">
             </div>
             <div class="btn-group">
-                <button class="btn" onclick="saveConfig()">保存配置</button>
-                <button class="btn btn-back" onclick="goBack('postgres-type')">返回</button>
+                <button id="btn-test" class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+                <button id="btn-save" class="btn" onclick="saveConfig()" disabled style="opacity: 0.5; cursor: not-allowed;">保存配置</button>
+                <button class="btn btn-back" onclick="goBack('engine')">返回</button>
             </div>
         </div>
     </div>
@@ -278,25 +288,131 @@
     <script>
         let currentConfig = {
             engine: '',
-            postgresType: ''
+            postgresType: 'external'
         };
+        let connectionTested = false;
+
+        function goToEngineSelect() {
+            const adminUsername = document.getElementById('adminUsername').value.trim();
+            const adminPassword = document.getElementById('adminPassword').value;
+            const adminPasswordConfirm = document.getElementById('adminPasswordConfirm').value;
+
+            if (!adminUsername) {
+                showMessage('error', '请输入管理员用户名');
+                return;
+            }
+            if (!adminPassword) {
+                showMessage('error', '请输入管理员密码');
+                return;
+            }
+            if (adminPassword !== adminPasswordConfirm) {
+                showMessage('error', '两次输入的密码不一致');
+                return;
+            }
+
+            document.getElementById('message').classList.remove('error', 'success');
+            showStep('step-engine');
+        }
 
         function selectEngine(engine) {
             currentConfig.engine = engine;
+            connectionTested = false;
+            updateSaveButton();
             if (engine === 'sqlite') {
                 saveConfig();
             } else {
-                showStep('step-postgres-type');
+                resetTestButton();
+                showStep('step-postgres-config');
             }
         }
 
-        function selectPostgresType(type) {
-            currentConfig.postgresType = type;
-            if (type === 'embedded') {
-                saveConfig();
+        function updateSaveButton() {
+            const btnSave = document.getElementById('btn-save');
+            if (connectionTested) {
+                btnSave.disabled = false;
+                btnSave.style.opacity = '1';
+                btnSave.style.cursor = 'pointer';
             } else {
-                showStep('step-postgres-config');
+                btnSave.disabled = true;
+                btnSave.style.opacity = '0.5';
+                btnSave.style.cursor = 'not-allowed';
             }
+        }
+
+        function onInputChanged() {
+            connectionTested = false;
+            updateSaveButton();
+            resetTestButton();
+        }
+
+        function resetTestButton() {
+            const btnTest = document.getElementById('btn-test');
+            btnTest.textContent = '测试连接';
+            btnTest.style.background = '#6c757d';
+            btnTest.style.color = 'white';
+            btnTest.style.borderColor = '#6c757d';
+        }
+
+        function testConnection() {
+            const host = document.getElementById('host').value;
+            const port = parseInt(document.getElementById('port').value);
+            const user = document.getElementById('user').value;
+            const password = document.getElementById('password').value;
+            const database = document.getElementById('database').value;
+
+            if (!host || !user || !password || !database) {
+                showMessage('error', '请填写所有必填字段');
+                return;
+            }
+
+            const btnTest = document.getElementById('btn-test');
+            btnTest.textContent = '测试中...';
+            btnTest.disabled = true;
+
+            fetch('/api/config/test-db', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    host: host,
+                    port: port,
+                    user: user,
+                    password: password,
+                    database: database
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                btnTest.disabled = false;
+                if (result.success) {
+                    btnTest.textContent = '成功';
+                    btnTest.style.background = '#28a745';
+                    btnTest.style.color = 'white';
+                    btnTest.style.borderColor = '#28a745';
+                    showMessage('success', result.message);
+                    connectionTested = true;
+                    updateSaveButton();
+                } else {
+                    btnTest.textContent = '测试连接';
+                    btnTest.style.background = '#6c757d';
+                    btnTest.style.color = 'white';
+                    btnTest.style.borderColor = '#6c757d';
+                    showMessage('error', result.error || '连接失败');
+                    connectionTested = false;
+                    updateSaveButton();
+                }
+            })
+            .catch(error => {
+                btnTest.textContent = '测试连接';
+                btnTest.style.background = '#6c757d';
+                btnTest.style.color = 'white';
+                btnTest.style.borderColor = '#6c757d';
+                btnTest.disabled = false;
+                showMessage('error', '请求失败: ' + error.message);
+                connectionTested = false;
+                updateSaveButton();
+            });
         }
 
         function goBack(targetStep) {
@@ -313,7 +429,9 @@
         function saveConfig() {
             const data = {
                 engine: currentConfig.engine,
-                postgresType: currentConfig.postgresType
+                postgresType: currentConfig.postgresType,
+                adminUsername: document.getElementById('adminUsername').value.trim(),
+                adminPassword: document.getElementById('adminPassword').value
             };
 
             if (currentConfig.engine === 'postgres' && currentConfig.postgresType === 'external') {
@@ -350,13 +468,21 @@
                 } else {
                     document.getElementById('loading').classList.remove('active');
                     showMessage('error', result.error || '保存失败');
-                    showStep('step-engine');
+                    if (currentConfig.engine === 'postgres') {
+                        showStep('step-postgres-config');
+                    } else {
+                        showStep('step-engine');
+                    }
                 }
             })
             .catch(error => {
                 document.getElementById('loading').classList.remove('active');
                 showMessage('error', '请求失败: ' + error.message);
-                showStep('step-engine');
+                if (currentConfig.engine === 'postgres') {
+                    showStep('step-postgres-config');
+                } else {
+                    showStep('step-engine');
+                }
             });
         }
 
