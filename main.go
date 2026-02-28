@@ -319,9 +319,35 @@ func getDataAndConfigDir() {
 			helpers.DataDir = dataDir
 			helpers.ConfigDir = configDir
 		} else {
-			configDir = os.Getenv("TRIM_PKGETC")
+			oldConfigDir := os.Getenv("TRIM_PKGETC")
+			configDir = os.Getenv("TRIM_DATA_SHARE_PATHS")
+			if configDir == "" {
+				configDir = oldConfigDir
+				needMk = false
+			} else {
+				configDir = filepath.Join(configDir, "config")
+				needMk = true
+				// 检查是否需要迁移文件
+				// oldConfigDir必须存在且不为空
+				if helpers.PathExists(oldConfigDir) && oldConfigDir != configDir {
+					// 检查oldConfigDir是否为空目录
+					if !helpers.IsDirEmpty(oldConfigDir) {
+						err := os.MkdirAll(configDir, 0755)
+						if err != nil {
+							log.Printf("创建配置目录失败: %v\n", err)
+							panic("创建配置目录失败")
+						}
+						// 迁移旧配置
+						err = helpers.MoveDir(oldConfigDir, configDir)
+						if err != nil {
+							log.Printf("迁移旧配置目录失败: %v\n", err)
+							panic("迁移旧配置目录失败")
+						}
+						needMk = false
+					}
+				}
+			}
 			dataDir = filepath.Join(configDir, "postgres") // 数据库目录
-			needMk = false
 			helpers.DataDir = dataDir
 			helpers.ConfigDir = configDir
 		}
