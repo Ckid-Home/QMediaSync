@@ -116,7 +116,7 @@ func (d *localDriver) GetFilesByPathId(ctx context.Context, rootPathId string, o
 }
 
 // 所有文件详情，含路径
-func (d *localDriver) DetailByFileId(ctx context.Context, fileId string) (*v115open.FileDetail, error) {
+func (d *localDriver) DetailByFileId(ctx context.Context, fileId string) (*SyncFileCache, error) {
 	return nil, nil
 }
 

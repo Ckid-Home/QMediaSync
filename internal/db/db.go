@@ -25,7 +25,7 @@ func InitSqlite3(dbFile string) *gorm.DB {
 	// if !helpers.PathExists(dbFile) {
 	// 	return nil
 	// }
-	sqliteDb, err := gorm.Open(sqlite.Open(dbFile+"?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"), &gorm.Config{
+	sqliteDb, err := gorm.Open(sqlite.Open(dbFile+"?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)"), &gorm.Config{
 		SkipDefaultTransaction: true,
 	})
 	if err != nil {
@@ -37,7 +37,7 @@ func InitSqlite3(dbFile string) *gorm.DB {
 	// }
 
 	// 2. 设置 busy_timeout (例如 5000 毫秒)
-	if tx := sqliteDb.Exec("PRAGMA busy_timeout = 5000"); tx.Error != nil {
+	if tx := sqliteDb.Exec("PRAGMA busy_timeout = 10000"); tx.Error != nil {
 		panic(fmt.Errorf("设置 busy_timeout 失败: %w", tx.Error))
 	} else {
 		helpers.AppLogger.Infof("设置 busy_timeout 成功: %d 毫秒", 5000)

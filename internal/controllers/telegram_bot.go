@@ -99,7 +99,17 @@ func runStrmTaskSync(taskID uint, isFullSync bool) {
 				syncPath.SetIsFullSync(true)
 			}
 			// 同步指定目录
-			synccron.AddNewSyncTask(taskID, synccron.SyncTaskTypeStrm)
+			taskObj := &synccron.NewSyncTask{
+				ID:           syncPath.ID,
+				SourcePath:   "",
+				SourcePathId: "",
+				TargetPath:   "",
+				AccountId:    syncPath.AccountId,
+				IsFile:       false,
+				TaskType:     synccron.SyncTaskTypeStrm,
+				SourceType:   syncPath.SourceType,
+			}
+			synccron.AddNewSyncTask(taskObj)
 			taskIDs = []uint{taskID}
 			// 设置通知内容
 			if isFullSync {
@@ -118,7 +128,17 @@ func runStrmTaskSync(taskID uint, isFullSync bool) {
 				syncPath.SetIsFullSync(true)
 			}
 			// 同步目录
-			synccron.AddNewSyncTask(syncPath.ID, synccron.SyncTaskTypeStrm)
+			taskObj := &synccron.NewSyncTask{
+				ID:           syncPath.ID,
+				SourcePath:   "",
+				SourcePathId: "",
+				TargetPath:   "",
+				AccountId:    syncPath.AccountId,
+				IsFile:       false,
+				TaskType:     synccron.SyncTaskTypeStrm,
+				SourceType:   syncPath.SourceType,
+			}
+			synccron.AddNewSyncTask(taskObj)
 			taskIDs = append(taskIDs, syncPath.ID)
 		}
 		// 设置通知内容
@@ -171,7 +191,17 @@ func runScrapeTaskSync(taskID uint) {
 		scrapePath := models.GetScrapePathByID(taskID)
 		if scrapePath != nil {
 			// 执行刮削任务
-			synccron.AddNewSyncTask(taskID, synccron.SyncTaskTypeScrape)
+			taskObj := &synccron.NewSyncTask{
+				ID:           scrapePath.ID,
+				SourcePath:   "",
+				SourcePathId: "",
+				TargetPath:   "",
+				AccountId:    scrapePath.AccountId,
+				IsFile:       false,
+				TaskType:     synccron.SyncTaskTypeScrape,
+				SourceType:   scrapePath.SourceType,
+			}
+			synccron.AddNewSyncTask(taskObj)
 			taskIDs = []uint{taskID}
 			// 设置通知内容
 			content = "目录：" + scrapePath.SourcePath + "，刮削任务已执行完毕"
@@ -182,7 +212,17 @@ func runScrapeTaskSync(taskID uint) {
 		allScrapePaths := models.GetScrapePathes("")
 		for _, scrapePath := range allScrapePaths {
 			// 执行刮削任务
-			synccron.AddNewSyncTask(scrapePath.ID, synccron.SyncTaskTypeScrape)
+			taskObj := &synccron.NewSyncTask{
+				ID:           scrapePath.ID,
+				SourcePath:   "",
+				SourcePathId: "",
+				TargetPath:   "",
+				AccountId:    scrapePath.AccountId,
+				IsFile:       false,
+				TaskType:     synccron.SyncTaskTypeScrape,
+				SourceType:   scrapePath.SourceType,
+			}
+			synccron.AddNewSyncTask(taskObj)
 			taskIDs = append(taskIDs, scrapePath.ID)
 		}
 		// 设置通知内容

@@ -177,13 +177,18 @@ func (c *OpenClient) GetFsDetailByPath(ctx context.Context, path string) (*FileD
 		// helpers.V115Log.Errorf("文件 %s 不存在: %v", fileId, err)
 		return nil, fmt.Errorf("Code=%d, Message=%s", resp.Code, resp.Message)
 	}
-	if err != nil {
-		helpers.V115Log.Errorf("调用文件详情接口失败: %v", err)
-		return nil, err
-	}
 	if respData.FileId == "" {
 		return nil, fmt.Errorf("115 返回空数据")
 	}
+	// 拼接Path
+	pathStr := make([]string, 0, len(respData.Paths))
+	for _, item := range respData.Paths {
+		if item.FileId == "0" {
+			continue
+		}
+		pathStr = append(pathStr, item.Name)
+	}
+	respData.Path = filepath.ToSlash(filepath.Join(pathStr...))
 	return respData, nil
 }
 
@@ -217,6 +222,15 @@ func (c *OpenClient) GetFsDetailByCid(ctx context.Context, fileId string) (*File
 	if respData.FileId == "" {
 		return nil, fmt.Errorf("115 返回空数据")
 	}
+	// 拼接Path
+	pathStr := make([]string, 0, len(respData.Paths))
+	for _, item := range respData.Paths {
+		if item.FileId == "0" {
+			continue
+		}
+		pathStr = append(pathStr, item.Name)
+	}
+	respData.Path = filepath.ToSlash(filepath.Join(pathStr...))
 	// helpers.AppLogger.Infof("文件 %s 详情中的文件名: %s", fileId, respData.FileName)
 	return respData, nil
 }

@@ -41,7 +41,8 @@ type SyncFileCache struct {
 	// openlist特有字段
 	OpenlistSign string `json:"openlist_sign"`
 
-	SourceType models.SourceType `json:"source_path"`
+	SourceType models.SourceType         `json:"source_path"`
+	Paths      []v115open.FileDetailPath `json:"paths"` // 父目录
 }
 
 func (sfc *SyncFileCache) GetPath() string {

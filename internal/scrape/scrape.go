@@ -202,7 +202,13 @@ func (s *Scrape) Stop() {
 }
 
 // 识别错误就回滚所有刮削好的元数据
-func (s *Scrape) Rollback(mediaFile *models.ScrapeMediaFile) error {
+func (s *Scrape) Rollback(mediaFile *models.ScrapeMediaFile) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			helpers.AppLogger.Errorf("Rollback panic: %v", r)
+			err = fmt.Errorf("Rollback panic: %v", r)
+		}
+	}()
 	s.init()
 	if s.scrapeImpl == nil {
 		helpers.AppLogger.Errorf("刮削实现为空")

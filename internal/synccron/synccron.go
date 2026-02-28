@@ -33,7 +33,17 @@ func StartSyncCron() {
 			continue
 		}
 		// 将同步目录ID添加到处理队列，而不是直接执行
-		if err := AddNewSyncTask(syncPath.ID, SyncTaskTypeStrm); err != nil {
+		taskObj := &NewSyncTask{
+			ID:           syncPath.ID,
+			SourcePath:   "",
+			SourcePathId: "",
+			TargetPath:   "",
+			AccountId:    syncPath.AccountId,
+			IsFile:       false,
+			TaskType:     SyncTaskTypeStrm,
+			SourceType:   syncPath.SourceType,
+		}
+		if err := AddNewSyncTask(taskObj); err != nil {
 			helpers.AppLogger.Errorf("将同步任务添加到队列失败: %s", err.Error())
 			continue
 		}
@@ -53,7 +63,17 @@ func startScrapeCron() {
 			continue
 		}
 		// 将刮削目录ID添加到处理队列，而不是直接执行
-		if err := AddNewSyncTask(scrapePath.ID, SyncTaskTypeScrape); err != nil {
+		taskObj := &NewSyncTask{
+			ID:           scrapePath.ID,
+			SourcePath:   "",
+			SourcePathId: "",
+			TargetPath:   "",
+			AccountId:    scrapePath.AccountId,
+			IsFile:       false,
+			TaskType:     SyncTaskTypeScrape,
+			SourceType:   scrapePath.SourceType,
+		}
+		if err := AddNewSyncTask(taskObj); err != nil {
 			helpers.AppLogger.Errorf("将刮削任务添加到队列失败: %s", err.Error())
 			continue
 		} else {
@@ -278,7 +298,17 @@ func InitSyncCron() {
 		helpers.AppLogger.Infof("已添加同步目录 %d 的定时任务，cron表达式: %s", syncPath.ID, syncPath.Cron)
 		SyncCron.AddFunc(syncPath.Cron, func() {
 			// 将同步目录ID添加到处理队列，而不是直接执行
-			if err := AddNewSyncTask(syncPath.ID, SyncTaskTypeStrm); err != nil {
+			taskObj := &NewSyncTask{
+				ID:           syncPath.ID,
+				SourcePath:   "",
+				SourcePathId: "",
+				TargetPath:   "",
+				AccountId:    syncPath.AccountId,
+				IsFile:       false,
+				TaskType:     SyncTaskTypeStrm,
+				SourceType:   syncPath.SourceType,
+			}
+			if err := AddNewSyncTask(taskObj); err != nil {
 				helpers.AppLogger.Errorf("将同步任务添加到队列失败: %s", err.Error())
 				return
 			}

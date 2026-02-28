@@ -44,12 +44,22 @@ const (
 )
 
 type NewSyncTask struct {
-	ID       uint
-	TaskType SyncTaskType
+	ID           uint
+	TaskType     SyncTaskType
+	SourcePath   string
+	SourcePathId string
+	TargetPath   string
+	IsFile       bool
+	SourceType   models.SourceType
+	AccountId    uint
 }
 
 func (t *NewSyncTask) Key() string {
-	return fmt.Sprintf("%d-%s", t.ID, t.TaskType)
+	if t.ID > 0 {
+		return fmt.Sprintf("%d-%s", t.ID, t.TaskType)
+	} else {
+		return fmt.Sprintf("%s-%s", t.SourcePathId, t.TaskType)
+	}
 }
 
 type NewSyncQueuePerType struct {
@@ -208,45 +218,58 @@ func (q *NewSyncQueuePerType) executeTask(task *NewSyncTask) {
 
 	switch task.TaskType {
 	case SyncTaskTypeStrm:
-		q.executeStrmSync(task.ID)
+		q.executeStrmSync(task)
 	case SyncTaskTypeScrape:
-		q.executeScrape(task.ID)
+		q.executeScrape(task)
 	}
 }
 
-func (q *NewSyncQueuePerType) executeStrmSync(id uint) {
-	syncPath := models.GetSyncPathById(id)
-	if syncPath == nil {
-		logError("获取同步目录失败，ID=%d", id)
-		return
-	}
+func (q *NewSyncQueuePerType) executeStrmSync(task *NewSyncTask) {
+	if task.ID == 0 {
+		// 手动同步
+		account, err := models.GetAccountById(task.AccountId)
+		if err != nil {
+			logError("获取账号失败，ID=%d, 错误=%v", task.AccountId, err)
+			return
+		}
+		q.strmSync = syncstrm.NewSyncStrmByPath(account, task.SourcePath, task.SourcePathId, task.TargetPath, task.IsFile)
+		if q.strmSync == nil {
+			logError("创建同步任务失败")
+			return
+		}
+	} else {
+		syncPath := models.GetSyncPathById(task.ID)
+		if syncPath == nil {
+			logError("获取同步目录失败，ID=%d", task.ID)
+			return
+		}
 
-	if syncPath.SourceType != q.sourceType {
-		logError("同步目录类型不匹配: 预期=%s, 实际=%s", q.sourceType, syncPath.SourceType)
-		return
-	}
+		if syncPath.SourceType != q.sourceType {
+			logError("同步目录类型不匹配: 预期=%s, 实际=%s", q.sourceType, syncPath.SourceType)
+			return
+		}
 
-	logInfo("开始执行STRM同步任务: ID=%d", id)
-	q.strmSync = syncstrm.NewSyncStrmFromSyncPath(syncPath)
-	if q.strmSync == nil {
-		logError("创建同步任务失败")
-		return
+		logInfo("开始执行STRM同步任务: ID=%d", task.ID)
+		q.strmSync = syncstrm.NewSyncStrmFromSyncPath(syncPath)
+		if q.strmSync == nil {
+			logError("创建同步任务失败")
+			return
+		}
 	}
 	defer func() {
 		q.strmSync = nil
 	}()
-
 	if startErr := q.strmSync.Start(); startErr == nil {
-		logInfo("STRM同步任务执行成功: ID=%d", id)
+		logInfo("STRM同步任务执行成功: ID=%d", task.ID)
 	} else {
-		logError("STRM同步任务执行失败: ID=%d, 错误=%v", id, startErr)
+		logError("STRM同步任务执行失败: ID=%d, 错误=%v", task.ID, startErr)
 	}
 }
 
-func (q *NewSyncQueuePerType) executeScrape(id uint) {
-	scrapePath := models.GetScrapePathByID(id)
+func (q *NewSyncQueuePerType) executeScrape(task *NewSyncTask) {
+	scrapePath := models.GetScrapePathByID(task.ID)
 	if scrapePath == nil {
-		logError("获取刮削目录失败，ID=%d", id)
+		logError("获取刮削目录失败，ID=%d", task.ID)
 		return
 	}
 
@@ -255,7 +278,7 @@ func (q *NewSyncQueuePerType) executeScrape(id uint) {
 		return
 	}
 
-	logInfo("开始执行刮削任务: ID=%d", id)
+	logInfo("开始执行刮削任务: ID=%d", task.ID)
 	q.scrapeInstance = scrape.NewScrape(scrapePath)
 	if q.scrapeInstance == nil {
 		logError("创建刮削任务失败")
@@ -266,9 +289,9 @@ func (q *NewSyncQueuePerType) executeScrape(id uint) {
 	}()
 
 	if success := q.scrapeInstance.Start(); success {
-		logInfo("刮削任务执行成功: ID=%d", id)
+		logInfo("刮削任务执行成功: ID=%d", task.ID)
 	} else {
-		logError("刮削任务执行失败: ID=%d", id)
+		logError("刮削任务执行失败: ID=%d", task.ID)
 	}
 }
 
@@ -434,30 +457,30 @@ func (m *NewSyncQueueManager) getQueue(sourceType models.SourceType) *NewSyncQue
 	return queue
 }
 
-func (m *NewSyncQueueManager) AddSyncTask(id uint, taskType SyncTaskType) error {
-	var sourceType models.SourceType
+func (m *NewSyncQueueManager) AddSyncTask(task *NewSyncTask) error {
+	// var sourceType models.SourceType
 
-	switch taskType {
-	case SyncTaskTypeStrm:
-		syncPath := models.GetSyncPathById(id)
-		if syncPath == nil {
-			return fmt.Errorf("获取同步目录失败: ID=%d", id)
-		}
-		sourceType = syncPath.SourceType
+	// switch task.TaskType {
+	// case SyncTaskTypeStrm:
+	// 	syncPath := models.GetSyncPathById(task.ID)
+	// 	if syncPath == nil {
+	// 		return fmt.Errorf("获取同步目录失败: ID=%d", task.ID)
+	// 	}
+	// 	sourceType = syncPath.SourceType
 
-	case SyncTaskTypeScrape:
-		scrapePath := models.GetScrapePathByID(id)
-		if scrapePath == nil {
-			return fmt.Errorf("获取刮削目录失败: ID=%d", id)
-		}
-		sourceType = scrapePath.SourceType
+	// case SyncTaskTypeScrape:
+	// 	scrapePath := models.GetScrapePathByID(task.ID)
+	// 	if scrapePath == nil {
+	// 		return fmt.Errorf("获取刮削目录失败: ID=%d", task.ID)
+	// 	}
+	// 	sourceType = scrapePath.SourceType
 
-	default:
-		return fmt.Errorf("未知的任务类型: %s", taskType)
-	}
+	// default:
+	// 	return fmt.Errorf("未知的任务类型: %s", task.TaskType)
+	// }
 
-	queue := m.getQueue(sourceType)
-	task := &NewSyncTask{ID: id, TaskType: taskType}
+	queue := m.getQueue(task.SourceType)
+	// task := &NewSyncTask{ID: id, TaskType: taskType}
 
 	if err := queue.AddTask(task); err != nil {
 		return err
@@ -555,11 +578,11 @@ func (m *NewSyncQueueManager) GetQueueStatus(sourceType models.SourceType) map[s
 	return queue.GetStatus()
 }
 
-func AddNewSyncTask(id uint, taskType SyncTaskType) error {
+func AddNewSyncTask(task *NewSyncTask) error {
 	if GlobalNewSyncQueueManager == nil {
 		InitNewSyncQueueManager()
 	}
-	return GlobalNewSyncQueueManager.AddSyncTask(id, taskType)
+	return GlobalNewSyncQueueManager.AddSyncTask(task)
 }
 
 func CancelNewSyncTask(id uint, taskType SyncTaskType) error {

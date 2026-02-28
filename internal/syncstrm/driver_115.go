@@ -2,6 +2,7 @@ package syncstrm
 
 import (
 	"Q115-STRM/internal/baidupan"
+	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/v115open"
 	"context"
@@ -239,12 +240,33 @@ func (d *open115Driver) GetFilesByPathId(ctx context.Context, rootPathId string,
 }
 
 // 所有文件详情，含路径
-func (d *open115Driver) DetailByFileId(ctx context.Context, fileId string) (*v115open.FileDetail, error) {
+func (d *open115Driver) DetailByFileId(ctx context.Context, fileId string) (*SyncFileCache, error) {
 	resp, err := d.client.GetFsDetailByCid(ctx, fileId)
 	if err != nil {
 		return nil, err
 	}
-	return resp, nil
+	parentId := resp.Paths[len(resp.Paths)-1].FileId
+	// 生成SyncFileCache
+	fileItem := &SyncFileCache{
+		FileId:     resp.FileId,
+		FileName:   resp.FileName,
+		FileType:   resp.FileCategory,
+		SourceType: models.SourceType115,
+		Path:       resp.Path,
+		ParentId:   parentId,
+		MTime:      helpers.StringToInt64(resp.Ptime),
+		FileSize:   helpers.StringToInt64(resp.FileSize),
+		PickCode:   resp.PickCode,
+		Paths:      resp.Paths,
+	}
+	if fileItem.FileType == v115open.TypeDir {
+		fileItem.IsVideo = false
+		fileItem.IsMeta = false
+	} else {
+		fileItem.IsVideo = d.s.IsValidVideoExt(fileItem.FileName)
+		fileItem.IsMeta = d.s.IsValidMetaExt(fileItem.FileName)
+	}
+	return fileItem, nil
 }
 
 // 删除目录下的某些文件

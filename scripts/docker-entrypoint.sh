@@ -62,10 +62,6 @@ check_and_update_ownership() {
             if [ "$SAVED_ID" != "$CURRENT_ID" ]; then
                 echo "检测到GUID:GPID变化 ($SAVED_ID -> $CURRENT_ID)，更新config目录所有者..."
                 chown -R "$CURRENT_GUID:$CURRENT_GPID" /app/config
-                if [ "$CURRENT_GUID" = "0" ] && [ -d "/app/config/postgres" ]; then
-                    echo "GUID为0，将postgres目录所有者改为qms:qms"
-                    chown -R 12331:12331 /app/config/postgres
-                fi
                 echo "所有者更新完成"
                 echo "$CURRENT_ID" > "$USER_FILE"
             else
@@ -75,10 +71,6 @@ check_and_update_ownership() {
             echo "首次记录GUID:GPID: $CURRENT_ID"
             echo "$CURRENT_ID" > "$USER_FILE"
             chown "$CURRENT_GUID:$CURRENT_GPID" "$USER_FILE" 2>/dev/null
-            if [ "$CURRENT_GUID" = "0" ] && [ -d "/app/config/postgres" ]; then
-                echo "GUID为0，将postgres目录所有者改为qms:qms"
-                chown -R 12331:12331 /app/config/postgres
-            fi
         fi
     else
         echo "警告: /app/config目录不存在"

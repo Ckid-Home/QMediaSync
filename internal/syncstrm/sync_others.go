@@ -3,6 +3,7 @@ package syncstrm
 import (
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/v115open"
+	"fmt"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -191,4 +192,26 @@ func (s *SyncStrm) StartOther() {
 		return
 	}
 	s.Sync.Logger.Infof("已经遍历了全部目录")
+}
+
+// 同步单个文件
+func (s *SyncStrm) StartFile() error {
+	// 查询文件详情
+	file, err := s.SyncDriver.DetailByFileId(s.Context, s.SourcePathId)
+	if err != nil {
+		s.Sync.Logger.Errorf("获取文件 %s 详情失败: %v", s.SourcePath, err)
+		return err
+	}
+	if !file.IsVideo {
+		s.Sync.Logger.Warnf("文件 %s 不是视频文件，跳过", file.FileName)
+		return fmt.Errorf("文件 %s 不是视频文件，跳过", file.FileName)
+	}
+	// file.LocalFilePath = filepath.ToSlash(filepath.Join(s.TargetPath, file.FileName))
+	// 验证文件有效性
+	if !s.ValidFile(file) {
+		s.Sync.Logger.Warnf("文件 %s 无效，跳过", file.FileName)
+		return nil
+	}
+	// 生成strm
+	return s.processNetFile(file)
 }

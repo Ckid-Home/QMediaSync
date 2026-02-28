@@ -84,11 +84,11 @@ func GetLocalPath(parentPath string) ([]DirResp, error) {
 	// windows
 	if parentPath == "" {
 		if runtime.GOOS == "windows" {
-			helpers.AppLogger.Infof("parentPath: %s", parentPath)
+			// helpers.AppLogger.Infof("parentPath: %s", parentPath)
 			if parentPath == "" {
 				// 获取盘符列表
 				partitions, err := disk.Partitions(false)
-				helpers.AppLogger.Infof("partitions: %+v", partitions)
+				// helpers.AppLogger.Infof("partitions: %+v", partitions)
 				if err != nil {
 					helpers.AppLogger.Errorf("获取盘符失败：%v", err)
 					return nil, err

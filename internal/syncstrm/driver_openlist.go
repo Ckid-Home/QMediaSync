@@ -148,7 +148,15 @@ func (d *openListDriver) GetPathIdByPath(ctx context.Context, path string) (stri
 }
 
 func (d *openListDriver) MakeStrmContent(sf *SyncFileCache) string {
-	return helpers.MakeOpenListUrl(d.s.Account.BaseUrl, sf.OpenlistSign, sf.GetFileId())
+	baseUrl := d.s.Config.StrmBaseUrl
+	if baseUrl == "" {
+		baseUrl = d.s.Account.BaseUrl
+	}
+	// 如果baseUrl以/结尾，删掉结尾的/
+	if before, ok := strings.CutSuffix(baseUrl, "/"); ok {
+		baseUrl = before
+	}
+	return helpers.MakeOpenListUrl(baseUrl, sf.OpenlistSign, sf.GetFileId())
 }
 
 func (d *openListDriver) GetTotalFileCount(ctx context.Context) (int64, string, error) {
@@ -164,7 +172,7 @@ func (d *openListDriver) GetFilesByPathId(ctx context.Context, rootPathId string
 }
 
 // 所有文件详情，含路径
-func (d *openListDriver) DetailByFileId(ctx context.Context, fileId string) (*v115open.FileDetail, error) {
+func (d *openListDriver) DetailByFileId(ctx context.Context, fileId string) (*SyncFileCache, error) {
 	return nil, nil
 }
 

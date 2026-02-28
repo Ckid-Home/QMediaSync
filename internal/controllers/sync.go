@@ -457,7 +457,18 @@ func StartSyncByPath(c *gin.Context) {
 		return
 	}
 	// syncPath.SetIsFullSync(false)
-	if err := synccron.AddNewSyncTask(syncPath.ID, synccron.SyncTaskTypeStrm); err != nil {
+	// 添加同步任务到队列
+	taskObj := &synccron.NewSyncTask{
+		ID:           syncPath.ID,
+		SourcePath:   "",
+		SourcePathId: "",
+		TargetPath:   "",
+		AccountId:    syncPath.AccountId,
+		SourceType:   syncPath.SourceType,
+		IsFile:       false,
+		TaskType:     synccron.SyncTaskTypeStrm,
+	}
+	if err := synccron.AddNewSyncTask(taskObj); err != nil {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "添加同步任务失败: " + err.Error(), Data: nil})
 		return
 	}
@@ -588,7 +599,18 @@ func FullStart115Sync(c *gin.Context) {
 	// 	}
 	// }
 	syncPath.SetIsFullSync(true)
-	if err := synccron.AddNewSyncTask(syncPath.ID, synccron.SyncTaskTypeStrm); err != nil {
+	// 添加同步任务到队列
+	taskObj := &synccron.NewSyncTask{
+		ID:           syncPath.ID,
+		SourcePath:   "",
+		SourcePathId: "",
+		TargetPath:   "",
+		AccountId:    syncPath.AccountId,
+		SourceType:   syncPath.SourceType,
+		IsFile:       false,
+		TaskType:     synccron.SyncTaskTypeStrm,
+	}
+	if err := synccron.AddNewSyncTask(taskObj); err != nil {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "添加同步任务失败: " + err.Error(), Data: nil})
 		return
 	}
@@ -642,4 +664,45 @@ func GetRelScrapePath(c *gin.Context) {
 	// 获取关联的刮削路径
 	scrapePathIds := syncPath.GetScrapePathIds()
 	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "关联的刮削路径获取成功", Data: scrapePathIds})
+}
+
+// 从网盘文件管理器手动触发同步
+func ManualSync(c *gin.Context) {
+	type manualSyncRequest struct {
+		PathId     string `form:"path_id" json:"path_id" binding:"required"`         // 文件ID
+		Path       string `form:"path" json:"path" binding:"required"`               // 路径
+		TargetPath string `form:"target_path" json:"target_path" binding:"required"` // 目标路径
+		IsFile     bool   `form:"is_file" json:"is_file"`                            // 是否文件
+		AccountId  uint   `form:"account_id" json:"account_id" binding:"required"`   // 账号ID
+	}
+	var req manualSyncRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: fmt.Sprintf("请求参数错误: %v", err), Data: nil})
+		return
+	}
+	if req.PathId == "" || req.Path == "" {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "path_id 和 path 参数不能为空", Data: nil})
+		return
+	}
+	account, err := models.GetAccountById(req.AccountId)
+	if err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "账号不存在", Data: nil})
+		return
+	}
+	// 手动触发同步
+	taskObj := &synccron.NewSyncTask{
+		ID:           0,
+		TaskType:     synccron.SyncTaskTypeStrm,
+		SourcePath:   req.Path,
+		SourcePathId: req.PathId,
+		TargetPath:   req.TargetPath,
+		IsFile:       req.IsFile,
+		SourceType:   account.SourceType,
+		AccountId:    req.AccountId,
+	}
+	if err := synccron.AddNewSyncTask(taskObj); err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "添加同步任务失败: " + err.Error(), Data: nil})
+		return
+	}
+	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "同步任务已添加到队列", Data: nil})
 }

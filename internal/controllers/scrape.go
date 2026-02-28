@@ -592,7 +592,18 @@ func ScanScrapePath(c *gin.Context) {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "刮削目录不存在", Data: nil})
 		return
 	}
-	if err := synccron.AddNewSyncTask(scrapePath.ID, synccron.SyncTaskTypeScrape); err != nil {
+	// 添加刮削任务到队列
+	taskObj := &synccron.NewSyncTask{
+		ID:           scrapePath.ID,
+		SourcePath:   "",
+		SourcePathId: "",
+		TargetPath:   "",
+		AccountId:    scrapePath.AccountId,
+		SourceType:   scrapePath.SourceType,
+		IsFile:       false,
+		TaskType:     synccron.SyncTaskTypeScrape,
+	}
+	if err := synccron.AddNewSyncTask(taskObj); err != nil {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "添加刮削任务失败: " + err.Error(), Data: nil})
 		return
 	}

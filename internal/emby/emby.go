@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var embySyncRunning int32
@@ -132,6 +133,7 @@ func PerformEmbySync() (int, error) {
 					models.CreateOrUpdateEmbyLibrarySyncPath(task.LibraryId, sf.SyncPathId, task.LibraryName)
 				}
 			}
+			time.Sleep(100 * time.Millisecond) // 休息100毫秒，避免对Emby API的过度请求，也让其他协程有机会写入数据库
 		}
 	}
 

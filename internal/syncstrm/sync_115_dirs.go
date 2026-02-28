@@ -57,7 +57,7 @@ func (s *SyncStrm) process115Path(ctx context.Context, pathId string) error {
 	}
 	var pathStr string
 	var pathName string
-	var detail *v115open.FileDetail
+	var detail *SyncFileCache
 	var fsErr error
 	// 处理路径ID
 	s.Sync.Logger.Infof("处理路径ID %s", pathId)

@@ -29,7 +29,7 @@ type driverImpl interface {
 	GetFilesByPathId(ctx context.Context, rootPathId string, offset, limit int) ([]v115open.File, error)
 	GetFilesByPathMtime(ctx context.Context, rootPathId string, offset, limit int, mtime int64) (*baidupan.FileListAllResponse, error)
 	// 所有文件详情，含路径
-	DetailByFileId(ctx context.Context, fileId string) (*v115open.FileDetail, error)
+	DetailByFileId(ctx context.Context, fileId string) (*SyncFileCache, error)
 	// 删除目录下的某些文件
 	DeleteFile(ctx context.Context, parentId string, fileIds []string) error
 }
@@ -228,11 +228,10 @@ func (s *SyncStrm) Start() error {
 		// 如果是文件，直接同步文件
 		s.Sync.Logger.Infof("本次同步的文件：%s，目标目录：%s", s.SourcePath, s.TargetPath)
 		// 直接同步文件
-		// 生成SyncFileCache
-
-		// 验证文件有效性
-
-		// 生成strm
+		if err := s.StartFile(); err != nil {
+			s.Sync.Failed(fmt.Sprintf("文件同步失败：%v", err))
+			return err
+		}
 	} else {
 		newPathId, err := s.SyncDriver.GetPathIdByPath(s.Context, s.SourcePath)
 		if err != nil {
@@ -340,7 +339,7 @@ func (s *SyncStrm) processNetFile(file *SyncFileCache) error {
 	// 1. 检查对应的本地文件是否存在
 	// s.Sync.Logger.Infof("正在处理网盘文件 %s => %s", file.FileId, file.FileName)
 	localFilePath := file.GetLocalFilePath(s.TargetPath, s.SourcePath)
-	// s.Sync.Logger.Infof("本地文件路径: %s", localFilePath)
+	s.Sync.Logger.Infof("本地文件路径: %s", localFilePath)
 	// 先处理重命名，只有非临时同步才会处理重命名，临时同步只会删除重建
 	var existingFile models.SyncFile
 	if !s.TmpSyncPath {
@@ -637,6 +636,7 @@ func (s *SyncStrm) handleTempTableDiff() error {
 	// 先删除SyncFile表中有，但是同步缓存中没有的记录，过程中顺便更新两边都有的数据，然后从同步缓存中删除该条数据（最后同步缓存中留下的就是新增的数据）
 	offset := 0
 	limit := 1000
+	i := 0
 	// 要删除的ID
 	waitDeleteIds := make([]uint, 0)
 	s.Sync.Logger.Infof("内存同步缓存中共有 %d 条数据，开始处理", s.memSyncCache.Count())
@@ -679,6 +679,12 @@ func (s *SyncStrm) handleTempTableDiff() error {
 				// 然后从同步缓存中移除该记录
 				s.memSyncCache.DeleteByFileId(file.FileId)
 				// s.Sync.Logger.Infof("SyncFile表数据 ID=%d 在同步缓存中存在，已更新并移除同步缓存记录", file.ID)
+				if i == 10 {
+					time.Sleep(10 * time.Microsecond) // 休息10毫秒，避免对数据库的过度请求，也让其他协程有机会写入数据库
+					i = 0
+				} else {
+					i++
+				}
 			}
 		}
 		if len(batch) < limit {
@@ -698,6 +704,7 @@ func (s *SyncStrm) handleTempTableDiff() error {
 				return err
 			}
 		} else {
+			i = 0
 			for i := 0; i < len(waitDeleteIds); i += batchSize {
 				end := i + batchSize
 				if end > len(waitDeleteIds) {
@@ -708,6 +715,12 @@ func (s *SyncStrm) handleTempTableDiff() error {
 				if err != nil {
 					s.Sync.Logger.Errorf("删除SyncFile表数据失败: %v", err)
 					return err
+				}
+				if i == 10 {
+					time.Sleep(10 * time.Microsecond) // 休息10毫秒，避免对数据库的过度请求，也让其他协程有机会写入数据库
+					i = 0
+				} else {
+					i++
 				}
 			}
 			s.Sync.Logger.Infof("删除SyncFile表中 %d 条多余数据成功", len(waitDeleteIds))
@@ -723,6 +736,7 @@ func (s *SyncStrm) handleTempTableDiff() error {
 		// s.Sync.Logger.Info("内存同步缓存数据全部处理完毕")
 		return nil
 	}
+	i = 0
 	for _, file := range fileItems {
 		syncFile := file.GetSyncFile(s, s.Account.BaseUrl)
 		err := db.Db.Create(syncFile).Error
@@ -733,6 +747,13 @@ func (s *SyncStrm) handleTempTableDiff() error {
 		// s.Sync.Logger.Infof("插入SyncFile表数据成功 FileID=%s", file.GetFileId())
 		// 插入成功后，从同步缓存中移除该记录
 		s.memSyncCache.DeleteByFileId(file.GetFileId())
+		if i == 10 {
+			time.Sleep(10 * time.Microsecond) // 休息10毫秒，避免对数据库的过度请求，也让其他协程有机会写入数据库
+			i = 0
+		} else {
+			i++
+		}
+
 	}
 	s.Sync.Logger.Infof("已插入所有新增文件记录，内存同步缓存中剩余 %d 条数据", s.memSyncCache.Count())
 	return nil

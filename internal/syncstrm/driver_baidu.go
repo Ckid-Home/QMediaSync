@@ -124,8 +124,36 @@ func (d *BaiduPanDriver) GetFilesByPathId(ctx context.Context, rootPathId string
 }
 
 // 所有文件详情，含路径
-func (d *BaiduPanDriver) DetailByFileId(ctx context.Context, fileId string) (*v115open.FileDetail, error) {
-	return nil, nil
+func (d *BaiduPanDriver) DetailByFileId(ctx context.Context, fileId string) (*SyncFileCache, error) {
+	resp, err := d.client.FileExists(ctx, fileId)
+	if err != nil {
+		return nil, err
+	}
+	parentId := filepath.ToSlash(filepath.Dir(fileId))
+	// 生成SyncFileCache
+	fileItem := &SyncFileCache{
+		FileId:     fileId,
+		FileName:   resp.ServerFilename,
+		FileType:   v115open.TypeFile,
+		SourceType: models.SourceTypeBaiduPan,
+		Path:       parentId,
+		ParentId:   parentId,
+		MTime:      int64(resp.ServerMtime),
+		FileSize:   int64(resp.Size),
+		IsVideo:    false,
+		IsMeta:     false,
+		Paths:      []v115open.FileDetailPath{},
+	}
+	if resp.IsDir == 1 {
+		fileItem.FileType = v115open.TypeDir
+		fileItem.IsVideo = false
+		fileItem.IsMeta = false
+	} else {
+		fileItem.PickCode = fmt.Sprintf("%d", resp.FsId)
+		fileItem.IsVideo = d.s.IsValidVideoExt(fileItem.FileName)
+		fileItem.IsMeta = d.s.IsValidMetaExt(fileItem.FileName)
+	}
+	return fileItem, nil
 }
 
 // 删除目录下的某些文件

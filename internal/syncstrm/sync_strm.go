@@ -78,9 +78,17 @@ func (s *SyncStrm) CompareStrm(st *SyncFileCache) int {
 			s.Sync.Logger.Errorf("获取Openlist账号信息失败: %v", err)
 			return 0
 		}
+		baseUrl := s.Config.StrmBaseUrl
+		if baseUrl == "" {
+			baseUrl = account.BaseUrl
+		}
+		// 如果baseUrl以/结尾，删掉结尾的/
+		if before, ok := strings.CutSuffix(baseUrl, "/"); ok {
+			baseUrl = before
+		}
 		// 比较主机名称是否相同
-		if strmData.BaseUrl != account.BaseUrl {
-			s.Sync.Logger.Warnf("文件 %s 的STRM内容的主机名称与本地不一致, 本地: %s, 远程: %s", filepath.Join(st.Path, st.FileName), account.BaseUrl, strmData.BaseUrl)
+		if strmData.BaseUrl != baseUrl {
+			s.Sync.Logger.Warnf("文件 %s 的STRM内容的主机名称与本地不一致, 本地: %s, 远程: %s", filepath.Join(st.Path, st.FileName), baseUrl, strmData.BaseUrl)
 			return 0
 		}
 		if strmData.Sign != st.OpenlistSign {
