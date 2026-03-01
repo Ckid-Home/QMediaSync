@@ -173,7 +173,42 @@ func (d *openListDriver) GetFilesByPathId(ctx context.Context, rootPathId string
 
 // 所有文件详情，含路径
 func (d *openListDriver) DetailByFileId(ctx context.Context, fileId string) (*SyncFileCache, error) {
-	return nil, nil
+	fsDetail, err := d.client.FileDetail(fileId)
+	if err != nil || (fsDetail != nil && fsDetail.Name == "") {
+		return nil, fmt.Errorf("文件ID %s 不存在: %v", fileId, err)
+	}
+	parentId := filepath.ToSlash(filepath.Dir(fileId))
+	var mtime int64
+	t, err := time.Parse(time.RFC3339, fsDetail.Modified)
+	if err != nil {
+		d.s.Sync.Logger.Errorf("解析时间格式失败: %v, 时间字符串: %s", err, fsDetail.Modified)
+		mtime = 0 // 错误时使用默认值
+	} else {
+		mtime = t.Unix() // 转换为Unix时间戳（秒）
+	}
+	fileItem := &SyncFileCache{
+		FileId:     fileId,
+		FileName:   fsDetail.Name,
+		FileType:   v115open.TypeFile,
+		SourceType: models.SourceTypeOpenList,
+		Path:       parentId,
+		ParentId:   parentId,
+		MTime:      mtime,
+		FileSize:   int64(fsDetail.Size),
+		IsVideo:    false,
+		IsMeta:     false,
+		Paths:      []v115open.FileDetailPath{},
+	}
+	if fsDetail.IsDir {
+		fileItem.FileType = v115open.TypeDir
+		fileItem.IsVideo = false
+		fileItem.IsMeta = false
+	} else {
+		fileItem.PickCode = fileId
+		fileItem.IsVideo = d.s.IsValidVideoExt(fileItem.FileName)
+		fileItem.IsMeta = d.s.IsValidMetaExt(fileItem.FileName)
+	}
+	return fileItem, nil
 }
 
 // 删除目录下的某些文件

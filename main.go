@@ -162,13 +162,13 @@ func (app *App) StartHttpServer(r *gin.Engine) {
 }
 
 func (app *App) StartDatabase(migrateMode bool) error {
-	defer models.Migrate()
 	// 根据配置启动数据库连接
 	if helpers.GlobalConfig.Db.Engine == helpers.DbEngineSqlite {
 		// 如果是sqlite，直接初始化sqlite连接
 		sqliteFile := filepath.Join(helpers.ConfigDir, helpers.GlobalConfig.Db.SqliteFile)
-		log.Printf("sqlite数据库文件路径：%s", sqliteFile)
+		helpers.AppLogger.Infof("sqlite数据库文件路径：%s", sqliteFile)
 		db.Db = db.InitSqlite3(sqliteFile)
+		models.Migrate()
 		return nil
 	}
 
@@ -214,7 +214,7 @@ func (app *App) StartDatabase(migrateMode bool) error {
 			return err
 		}
 	}
-
+	models.Migrate()
 	return nil
 }
 
@@ -797,7 +797,7 @@ func initEnv() bool {
 		needMigrate := migrate.ShouldMigrate()
 		// needMigrate := false
 		if err := QMSApp.StartDatabase(needMigrate); err != nil {
-			log.Println("数据库启动失败:", err)
+			helpers.AppLogger.Errorf("数据库启动失败: %v", err)
 			return false
 		}
 		// 如果启动了迁移服务，则直接返回false（迁移服务会自己处理退出）
@@ -859,7 +859,7 @@ func main() {
 		return
 	}
 	if !initEnv() {
-		return
+		panic("初始化环境失败")
 	}
 	if runtime.GOOS == "windows" {
 		if helpers.IsRelease {

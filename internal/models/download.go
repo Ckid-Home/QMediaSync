@@ -255,6 +255,7 @@ func (dq *DQ) worker() {
 		}
 		// 执行下载任务
 		task.Download()
+		time.Sleep(10 * time.Millisecond) // 等待10毫秒，防止CPU占用过高，也给其他协程流出数据库写入时间
 	}
 }
 

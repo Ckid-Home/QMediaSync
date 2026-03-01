@@ -225,7 +225,7 @@ listen_addresses = '%s'
 port = %d
 max_connections = 100
 shared_buffers = 128MB
-dynamic_shared_memory_type = %s
+#dynamic_shared_memory_type = %s
 unix_socket_directories = '%s'
 
 # 日志配置
@@ -305,7 +305,7 @@ func (m *EmbeddedManager) startPostgresProcess() error {
 		os.Setenv("PGDATA", m.config.DataDir)
 		os.Setenv("PGPORT", fmt.Sprintf("%d", m.config.Port))
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command(postgresPath, "-D", m.config.DataDir, "-h", m.config.Host, "-p", fmt.Sprintf("%d", m.config.Port))
+			cmd = exec.Command(postgresPath, "-D", m.config.DataDir, "-h", m.config.Host, "-p", fmt.Sprintf("%d", m.config.Port), "-k", tmpPath)
 			cmd.Stdout = os.Stdout
 		} else {
 			cmd = exec.Command(postgresPath, "start", "-D", m.config.DataDir, "-o", fmt.Sprintf("-k %s -c unix_socket_directories='%s'", tmpPath, tmpPath))
@@ -425,12 +425,17 @@ func (m *EmbeddedManager) connectToDB() error {
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return fmt.Errorf("连接数据库失败: %v", err)
+	} else {
+		helpers.AppLogger.Info("成功连接到 PostgreSQL 数据库")
 	}
 
 	// 测试连接
 	if derr := db.Ping(); derr != nil {
 		db.Close()
+		helpers.AppLogger.Errorf("数据库连接测试失败: %v", derr)
 		return fmt.Errorf("数据库连接测试失败: %v", derr)
+	} else {
+		helpers.AppLogger.Info("数据库连接测试成功")
 	}
 
 	m.db = db
@@ -438,6 +443,8 @@ func (m *EmbeddedManager) connectToDB() error {
 	// 创建应用数据库
 	if cerr := m.createAppDatabase(); cerr != nil {
 		return cerr
+	} else {
+		helpers.AppLogger.Info("应用数据库创建成功")
 	}
 
 	// 重新连接到应用数据库
@@ -447,6 +454,8 @@ func (m *EmbeddedManager) connectToDB() error {
 	db, err = sql.Open("postgres", connStr)
 	if err != nil {
 		return fmt.Errorf("连接到应用数据库失败: %v", err)
+	} else {
+		helpers.AppLogger.Info("成功连接到应用数据库")
 	}
 
 	m.db = db

@@ -277,8 +277,18 @@ func (s *MigrateServer) performMigrateBackup() error {
 		return err
 	}
 
-	backup.SetRunningResult("backup", "备份完成", totalTable, count, "", false)
+	backup.SetRunningResult("backup", "备份完成，正在停止内嵌数据库...", totalTable, count, "", false)
 	helpers.AppLogger.Infof("迁移备份完成，文件保存到: %s", s.backupPath)
+
+	if s.dbManager != nil {
+		if err := s.dbManager.Stop(); err != nil {
+			helpers.AppLogger.Warnf("停止内嵌数据库失败: %v", err)
+		} else {
+			helpers.AppLogger.Info("内嵌数据库已停止")
+		}
+	}
+
+	backup.SetRunningResult("backup", "备份完成", totalTable, count, "", false)
 	return nil
 }
 
@@ -386,6 +396,16 @@ func (s *MigrateServer) handleSaveConfig(c *gin.Context) {
 	if err := helpers.SaveConfig(&helpers.GlobalConfig); err != nil {
 		c.JSON(500, gin.H{"error": "保存配置失败: " + err.Error()})
 		return
+	}
+
+	postgresDir := filepath.Join(helpers.ConfigDir, "postgres")
+	postgresBackupDir := filepath.Join(helpers.ConfigDir, "postgres-backup")
+	if helpers.PathExists(postgresDir) {
+		if err := os.Rename(postgresDir, postgresBackupDir); err != nil {
+			helpers.AppLogger.Warnf("重命名postgres目录失败: %v", err)
+		} else {
+			helpers.AppLogger.Info("已将postgres目录重命名为postgres-backup")
+		}
 	}
 
 	s.isCompleted = true

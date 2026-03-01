@@ -4,6 +4,8 @@ import (
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/synccron"
+	"Q115-STRM/internal/v115open"
+	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -670,7 +672,7 @@ func GetRelScrapePath(c *gin.Context) {
 func ManualSync(c *gin.Context) {
 	type manualSyncRequest struct {
 		PathId     string `form:"path_id" json:"path_id" binding:"required"`         // 文件ID
-		Path       string `form:"path" json:"path" binding:"required"`               // 路径
+		Path       string `form:"path" json:"path"`                                  // 路径
 		TargetPath string `form:"target_path" json:"target_path" binding:"required"` // 目标路径
 		IsFile     bool   `form:"is_file" json:"is_file"`                            // 是否文件
 		AccountId  uint   `form:"account_id" json:"account_id" binding:"required"`   // 账号ID
@@ -688,6 +690,34 @@ func ManualSync(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "账号不存在", Data: nil})
 		return
+	}
+	if req.Path == "" {
+		// 使用文件ID查询详情
+		switch account.SourceType {
+		case models.SourceType115:
+			client := account.Get115Client()
+			// 115网盘文件详情接口
+			fileDetail, err := client.GetFsDetailByCid(context.Background(), req.PathId)
+			if err != nil {
+				c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取文件详情失败: " + err.Error(), Data: nil})
+				return
+			}
+			req.Path = fileDetail.Path
+			req.IsFile = fileDetail.FileCategory == v115open.TypeFile
+		case models.SourceTypeBaiduPan:
+			client := account.GetBaiDuPanClient()
+			// 百度网盘文件详情接口
+			fileDetail, err := client.FileExists(context.Background(), req.PathId)
+			if err != nil {
+				c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取文件详情失败: " + err.Error(), Data: nil})
+				return
+			}
+			req.Path = fileDetail.Path
+			req.IsFile = fileDetail.IsDir == 0
+		default:
+			c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "不支持的文件类型", Data: nil})
+			return
+		}
 	}
 	// 手动触发同步
 	taskObj := &synccron.NewSyncTask{
