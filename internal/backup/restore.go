@@ -215,13 +215,15 @@ func restoreFromJsonFile[T any](backupDir string, modelName string, totalTable i
 		// 解析json
 		var item T
 		if err := json.Unmarshal([]byte(line), &item); err != nil {
-			return fmt.Errorf("解析json失败: %v", err)
+			// return fmt.Errorf("解析json失败: %v", err)
+			helpers.AppLogger.Warnf("%s 解析json失败: %v", modelName, err)
 		} else {
 			// helpers.AppLogger.Infof("%s 解析json成功: %d", modelName, restoredCount)
 		}
 		// 插入数据库
 		if err := db.Db.Create(&item).Error; err != nil {
-			return fmt.Errorf("插入数据库失败: %v", err)
+			// return fmt.Errorf("插入数据库失败: %v", err)
+			helpers.AppLogger.Warnf("%s 插入数据库失败: %v", modelName, err)
 		} else {
 			// helpers.AppLogger.Infof("%s 插入数据库成功: %d", modelName, restoredCount)
 		}
