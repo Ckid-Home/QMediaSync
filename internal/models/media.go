@@ -128,19 +128,24 @@ func (m *Media) Save() error {
 func (m *Media) DecodeJson() {
 	// 解码JSON字符串
 	if err := json.Unmarshal([]byte(m.ActorsJson), &m.Actors); err != nil {
-		helpers.AppLogger.Errorf("解码ActorsJson失败: %v", err)
+		helpers.AppLogger.Warnf("解码ActorsJson失败: %v", err)
+		m.Actors = []helpers.Actor{}
 	}
 	if err := json.Unmarshal([]byte(m.DirectorJson), &m.Director); err != nil {
-		helpers.AppLogger.Errorf("解码DirectorJson失败: %v", err)
+		helpers.AppLogger.Warnf("解码DirectorJson失败: %v", err)
+		m.Director = []helpers.Director{}
 	}
 	if err := json.Unmarshal([]byte(m.OriginalCountryJson), &m.OriginCountry); err != nil {
-		helpers.AppLogger.Errorf("解码OriginalCountryJson失败: %v", err)
+		helpers.AppLogger.Warnf("解码OriginalCountryJson失败: %v", err)
+		m.OriginCountry = []string{}
 	}
 	if err := json.Unmarshal([]byte(m.GenresJson), &m.Genres); err != nil {
-		helpers.AppLogger.Errorf("解码GenresJson失败: %v", err)
+		helpers.AppLogger.Warnf("解码GenresJson失败: %v", err)
+		m.Genres = []tmdb.Genre{}
 	}
 	if err := json.Unmarshal([]byte(m.SubtitleFileJson), &m.SubtitleFiles); err != nil {
-		helpers.AppLogger.Errorf("解码SubtitleFileJson失败: %v", err)
+		helpers.AppLogger.Warnf("解码SubtitleFileJson失败: %v", err)
+		m.SubtitleFiles = []*MediaMetaFiles{}
 	}
 }
 

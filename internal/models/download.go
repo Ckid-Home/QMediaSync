@@ -54,7 +54,7 @@ func InitDQ() bool {
 
 func NewDq(maxConcurrency int) *DQ {
 	return &DQ{
-		tasks:      make(chan *DbDownloadTask, maxConcurrency*10),
+		tasks:      make(chan *DbDownloadTask, maxConcurrency+2),
 		numWorkers: maxConcurrency,
 		running:    false,
 		limiter:    rate.NewLimiter(rate.Limit(maxConcurrency), maxConcurrency),

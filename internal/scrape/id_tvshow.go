@@ -57,7 +57,6 @@ func (i *IdTvShowImpl) Identify(mediaFile *models.ScrapeMediaFile) error {
 
 func (i *IdTvShowImpl) extractInfo(mediaFile *models.ScrapeMediaFile) (*helpers.MediaInfo, error) {
 	// 先从文件名中提取季和集
-
 	disableAI := false
 	if i.scrapePath.EnableAi == models.AiActionEnforce {
 		// 强制使用AI，如果AI失败则退回正则识别
@@ -78,13 +77,13 @@ func (i *IdTvShowImpl) extractInfo(mediaFile *models.ScrapeMediaFile) (*helpers.
 	}
 	info, err := i.extractInfoByRE(mediaFile)
 	if err != nil {
-		helpers.AppLogger.Errorf("使用正则提取电影信息失败: %v", err)
+		helpers.AppLogger.Errorf("使用正则提取电视剧信息失败: %v", err)
 		if disableAI || i.scrapePath.EnableAi == models.AiActionOff {
 			helpers.AppLogger.Errorf("由于禁用AI识别，所以直接返回错误: %v", err)
 			return nil, err
 		}
 	} else if info.TmdbId != 0 {
-		helpers.AppLogger.Infof("使用正则提取电影信息成功, 文件名 %s, 文件夹：%s 提取结果 %+v", mediaFile.VideoFilename, filepath.Base(mediaFile.TvshowPath), info)
+		helpers.AppLogger.Infof("使用正则提取电视剧信息成功, 文件名 %s, 文件夹：%s 提取结果 %+v", mediaFile.VideoFilename, filepath.Base(mediaFile.TvshowPath), info)
 		return &helpers.MediaInfo{
 			Name:   info.Name,
 			Year:   info.Year,
