@@ -165,83 +165,169 @@ func (i *IdTvShowImpl) extractInfoByAI(mediaFile *models.ScrapeMediaFile) (*help
 // 正则提取
 // 从文件名中获取名字+年份
 func (i *IdTvShowImpl) extractInfoByRE(mediaFile *models.ScrapeMediaFile) (*helpers.MediaInfo, error) {
+	return i.extractInfoByREV2(mediaFile)
+	// folderName := filepath.Base(mediaFile.TvshowPath)
+	// filename := filepath.Base(mediaFile.VideoFilename)
+	// // 从文件名中获取媒体信息
+	// info := helpers.ExtractMediaInfoRe(filename, false, false, i.scrapePath.VideoExtList, i.scrapePath.DeleteKeyword...)
+	// if info.TmdbId != 0 {
+	// 	// 使用tmdb id查询
+	// 	cname, cyear, cerr := i.tmdbImpl.CheckByTmdbId(info.TmdbId)
+	// 	if cerr != nil {
+	// 		helpers.AppLogger.Errorf("使用tmdb id查询媒体信息失败, tmdb id %d, 错误信息 %v", info.TmdbId, cerr)
+	// 	} else {
+	// 		if cname != "" {
+	// 			info.Name = cname
+	// 		}
+	// 		if cyear != 0 {
+	// 			info.Year = cyear
+	// 		}
+	// 		return info, nil
+	// 	}
+	// }
+	// if info.Name != "" && info.Year != 0 {
+	// 	// 使用名称和年份查询
+	// 	cname, cid, cyear, cerr := i.tmdbImpl.CheckByNameAndYear(info.Name, info.Year, true)
+	// 	if cerr != nil {
+	// 		helpers.AppLogger.Errorf("使用名称和年份查询媒体信息失败, 名称 %s, 年份 %d, 错误信息 %v", info.Name, info.Year, cerr)
+	// 	} else {
+	// 		info.TmdbId = cid
+	// 		info.Year = cyear
+	// 		info.Name = cname
+	// 		helpers.AppLogger.Infof("使用正则从文件名中提取媒体信息成功，文件名 %s, 提取结果 %+v", filename, info)
+	// 		return info, nil
+	// 	}
+	// }
+	// helpers.AppLogger.Warnf("文件名 %s, 缺少名称或年份，继续从文件夹中提取", filename)
+	// // 使用正则从文件夹中提取信息
+	// folderInfo := helpers.ExtractMediaInfoRe(folderName, true, false, i.scrapePath.VideoExtList, i.scrapePath.DeleteKeyword...)
+	// helpers.AppLogger.Infof("正则从文件夹中提取信息，文件夹 %s， 提取结果 %+v", folderName, folderInfo)
+	// if folderInfo.TmdbId != 0 && info.TmdbId == 0 {
+	// 	info.TmdbId = folderInfo.TmdbId
+	// }
+	// if folderInfo.Name != "" && info.Name == "" {
+	// 	info.Name = folderInfo.Name
+	// }
+	// if folderInfo.Year != 0 {
+	// 	info.Year = folderInfo.Year
+	// }
+	// // 从tmdb查询
+	// if info.TmdbId != 0 {
+	// 	// 使用tmdb id查询
+	// 	cname, cyear, cerr := i.tmdbImpl.CheckByTmdbId(info.TmdbId)
+	// 	if cerr != nil {
+	// 		helpers.AppLogger.Errorf("使用tmdb id查询媒体信息失败, tmdb id %d, 错误信息 %v", info.TmdbId, cerr)
+	// 	} else {
+	// 		info.Name = cname
+	// 		info.Year = cyear
+	// 		helpers.AppLogger.Infof("使用tmdb id查询媒体信息成功, tmdb id %d, 名称 %s, 年份 %d", info.TmdbId, info.Name, info.Year)
+	// 		return info, nil
+	// 	}
+	// }
+	// if info.Name != "" {
+	// 	// 使用名称和年份查询
+	// 	cname, cid, cyear, cerr := i.tmdbImpl.CheckByNameAndYear(info.Name, info.Year, true)
+	// 	if cerr != nil {
+	// 		err := fmt.Errorf("使用名称和年份查询媒体信息失败, 名称 %s, 年份 %d, 错误信息 %v", info.Name, info.Year, cerr)
+	// 		helpers.AppLogger.Errorf(err.Error())
+	// 		return nil, err
+	// 	} else {
+	// 		info.TmdbId = cid
+	// 		info.Year = cyear
+	// 		info.Name = cname
+	// 		helpers.AppLogger.Infof("使用名称和年份查询媒体信息成功, 名称 %s, 年份 %d, 名称: %s TMDB ID %d", info.Name, info.Year, info.Name, info.TmdbId)
+	// 		return info, nil
+	// 	}
+	// }
+	// return nil, fmt.Errorf("文件名 %s, 无法提取到任何媒体信息", filename)
+}
+
+// 先从文件名中提取名称 + 年份; 如果有直接用，如果没有直接用名称搜索，如果有再使用结果搜索季，如果季的年份=文件名的年份则直接用
+// 如果上述无法完成则从文件夹中提取名称+年份；如果有直接用
+func (i *IdTvShowImpl) extractInfoByREV2(mediaFile *models.ScrapeMediaFile) (*helpers.MediaInfo, error) {
 	folderName := filepath.Base(mediaFile.TvshowPath)
 	filename := filepath.Base(mediaFile.VideoFilename)
 	// 从文件名中获取媒体信息
 	info := helpers.ExtractMediaInfoRe(filename, false, false, i.scrapePath.VideoExtList, i.scrapePath.DeleteKeyword...)
-	if info.TmdbId != 0 {
-		// 使用tmdb id查询
-		cname, cyear, cerr := i.tmdbImpl.CheckByTmdbId(info.TmdbId)
-		if cerr != nil {
-			helpers.AppLogger.Errorf("使用tmdb id查询媒体信息失败, tmdb id %d, 错误信息 %v", info.TmdbId, cerr)
-		} else {
-			if cname != "" {
-				info.Name = cname
-			}
-			if cyear != 0 {
-				info.Year = cyear
-			}
-			return info, nil
-		}
+	info, err := i.find(mediaFile, info.TmdbId, info.Name, info.Year)
+	if err == nil {
+		return info, nil
 	}
-	if info.Name != "" && info.Year != 0 {
-		// 使用名称和年份查询
-		cname, cid, cyear, cerr := i.tmdbImpl.CheckByNameAndYear(info.Name, info.Year, true)
-		if cerr != nil {
-			helpers.AppLogger.Errorf("使用名称和年份查询媒体信息失败, 名称 %s, 年份 %d, 错误信息 %v", info.Name, info.Year, cerr)
-		} else {
-			info.TmdbId = cid
-			info.Year = cyear
-			info.Name = cname
-			helpers.AppLogger.Infof("使用正则从文件名中提取媒体信息成功，文件名 %s, 提取结果 %+v", filename, info)
-			return info, nil
-		}
-	}
-	helpers.AppLogger.Warnf("文件名 %s, 缺少名称或年份，继续从文件夹中提取", filename)
-	// 使用正则从文件夹中提取信息
+	// 从文件夹中提取信息
 	folderInfo := helpers.ExtractMediaInfoRe(folderName, true, false, i.scrapePath.VideoExtList, i.scrapePath.DeleteKeyword...)
 	helpers.AppLogger.Infof("正则从文件夹中提取信息，文件夹 %s， 提取结果 %+v", folderName, folderInfo)
-	if folderInfo.TmdbId != 0 && info.TmdbId == 0 {
-		info.TmdbId = folderInfo.TmdbId
+	newInfo, ferr := i.find(mediaFile, folderInfo.TmdbId, folderInfo.Name, folderInfo.Year)
+	if ferr == nil {
+		return newInfo, nil
 	}
-	if folderInfo.Name != "" && info.Name == "" {
-		info.Name = folderInfo.Name
-	}
-	if folderInfo.Year != 0 {
-		info.Year = folderInfo.Year
-	}
-	// 从tmdb查询
-	if info.TmdbId != 0 {
-		// 使用tmdb id查询
-		cname, cyear, cerr := i.tmdbImpl.CheckByTmdbId(info.TmdbId)
-		if cerr != nil {
-			helpers.AppLogger.Errorf("使用tmdb id查询媒体信息失败, tmdb id %d, 错误信息 %v", info.TmdbId, cerr)
-		} else {
-			info.Name = cname
-			info.Year = cyear
-			helpers.AppLogger.Infof("使用tmdb id查询媒体信息成功, tmdb id %d, 名称 %s, 年份 %d", info.TmdbId, info.Name, info.Year)
-			return info, nil
-		}
-	}
-	if info.Name != "" {
-		// 使用名称和年份查询
-		cname, cid, cyear, cerr := i.tmdbImpl.CheckByNameAndYear(info.Name, info.Year, true)
-		if cerr != nil {
-			err := fmt.Errorf("使用名称和年份查询媒体信息失败, 名称 %s, 年份 %d, 错误信息 %v", info.Name, info.Year, cerr)
-			helpers.AppLogger.Errorf(err.Error())
-			return nil, err
-		} else {
-			info.TmdbId = cid
-			info.Year = cyear
-			info.Name = cname
-			helpers.AppLogger.Infof("使用名称和年份查询媒体信息成功, 名称 %s, 年份 %d, 名称: %s TMDB ID %d", info.Name, info.Year, info.Name, info.TmdbId)
-			return info, nil
-		}
-	}
-	return nil, fmt.Errorf("文件名 %s, 无法提取到任何媒体信息", filename)
+	return nil, ferr
 }
 
-// // 先从文件名中提取名称 + 年份
-// func (i *IdTvShowImpl) extractInfoByREV2(mediaFile *models.ScrapeMediaFile) (*helpers.MediaInfo, error) {
-
-// }
+// 从tmdb查询名称和年份是否匹配
+func (i *IdTvShowImpl) find(mediaFile *models.ScrapeMediaFile, tmdbid int64, name string, year int) (*helpers.MediaInfo, error) {
+	if tmdbid != 0 {
+		// 使用tmdb id查询
+		cname, cyear, cerr := i.tmdbImpl.CheckByTmdbId(tmdbid)
+		if cerr != nil {
+			helpers.AppLogger.Errorf("使用tmdb id查询媒体信息失败, tmdb id %d, 错误信息 %v", tmdbid, cerr)
+		} else {
+			if cname != "" {
+				name = cname
+			}
+			if cyear != 0 {
+				year = cyear
+			}
+			return &helpers.MediaInfo{
+				TmdbId: tmdbid,
+				Name:   name,
+				Year:   year,
+			}, nil
+		}
+	}
+	if name != "" && year != 0 {
+		// 使用名称和年份查询
+		cname, cid, cyear, cerr := i.tmdbImpl.CheckByNameAndYear(name, year, true)
+		if cerr != nil {
+			helpers.AppLogger.Errorf("使用名称和年份查询电视剧失败, 名称 %s, 年份 %d, 错误信息 %v", name, year, cerr)
+		} else {
+			return &helpers.MediaInfo{
+				TmdbId: cid,
+				Name:   cname,
+				Year:   cyear,
+			}, nil
+		}
+	}
+	if name != "" {
+		// 使用名称查询
+		cname, cid, cyear, cerr := i.tmdbImpl.CheckByNameAndYear(name, 0, false)
+		if cerr != nil {
+			helpers.AppLogger.Errorf("使用名称查询电视剧失败, 名称 %s, 错误信息 %v", name, cerr)
+			return nil, cerr
+		}
+		// 继续查询季，确定年份是否正确
+		if year != 0 && mediaFile.SeasonNumber >= 0 {
+			// 检查季是否存在
+			season, cerr := i.tmdbImpl.CheckSeasonByTmdbId(cid, mediaFile.SeasonNumber)
+			if cerr != nil {
+				helpers.AppLogger.Errorf("使用tmdb id查询季失败, tmdb id %d, 季数 %d, 错误信息 %v", cid, mediaFile.SeasonNumber, cerr)
+			} else {
+				if season.AirDate != "" {
+					syear := helpers.ParseYearFromDate(season.AirDate)
+					if syear != 0 {
+						// 检查年份是否相同
+						if syear != year {
+							helpers.AppLogger.Errorf("tmdb id %d, 季数 %d, 季的年份 %d 与文件中的年份 %d 不匹配", cid, mediaFile.SeasonNumber, syear, year)
+							return nil, fmt.Errorf("tmdb id %d, 季数 %d, 季的年份 %d 与文件中的年份 %d 不匹配", cid, mediaFile.SeasonNumber, syear, year)
+						}
+					}
+				}
+				return &helpers.MediaInfo{
+					TmdbId: cid,
+					Name:   cname,
+					Year:   cyear,
+				}, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("名称 %s, 年份 %d, 无法从tmdb查询到匹配的电视剧信息", name, year)
+}

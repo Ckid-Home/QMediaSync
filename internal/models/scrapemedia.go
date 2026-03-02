@@ -747,22 +747,26 @@ func (sm *ScrapeMediaFile) ReScrape(name string, year int, tmdbId int64, season 
 			db.Db.Where("media_id = ?", mediaId).Delete(&MediaSeason{})
 			db.Db.Where("media_id = ?", mediaId).Delete(&MediaEpisode{})
 			// if sm.PathId == "" {
-			if err := db.Db.Model(&ScrapeMediaFile{}).Where("tvshow_path_id = ? and batch_no = ?", sm.TvshowPathId, sm.BatchNo).Updates(updateData).Error; err != nil {
+			edb := db.Db.Model(&ScrapeMediaFile{}).Where("tvshow_path_id = ? and batch_no = ?", sm.TvshowPathId, sm.BatchNo).Updates(updateData)
+			if err := edb.Error; err != nil {
 				helpers.AppLogger.Errorf("重新刮削时更新电视剧内所有剧集失败: %v", err)
 				return err
+			} else {
+				helpers.AppLogger.Infof("重新刮削时更新电视剧内所有剧集成功, 影响 %d 行 %+v", edb.RowsAffected, updateData)
 			}
 			if err := db.Db.Model(ScrapeMediaFile{}).Where("id = ?", sm.ID).Updates(updateData).Error; err != nil {
 				helpers.AppLogger.Errorf("重新刮削时更新剧集失败: %v", err)
 				return err
+			} else {
+				helpers.AppLogger.Infof("重新刮削时更新剧集成功, %d => %+v", sm.ID, updateData)
+				sm.IsReScrape = true
+				sm.ReScrapeTime = time.Now().Unix()
+				sm.Status = ScrapeMediaStatusScanned
+				sm.MediaId = 0
+				sm.MediaSeasonId = 0
+				sm.MediaEpisodeId = 0
+				sm.FailedReason = ""
 			}
-			// } else {
-			// 	if err := db.Db.Model(&ScrapeMediaFile{}).Where("path_id = ? and batch_no = ?", sm.PathId, sm.BatchNo).Updates(updateData).Error; err != nil {
-			// 		helpers.AppLogger.Errorf("重新刮削时更新电视剧内其他剧集失败2: %v", err)
-			// 		return err
-			// 	}
-			// 	db.Db.Where("id = ?", sm.ID).Updates(updateData)
-			// }
-
 			hasEdit := false
 			// 检查输入的季是否存在
 			if season > 0 {

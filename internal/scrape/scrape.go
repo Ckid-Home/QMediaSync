@@ -6,6 +6,7 @@ import (
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/openlist"
 	"Q115-STRM/internal/scrape/scan"
+	"Q115-STRM/internal/tmdb"
 	"Q115-STRM/internal/v115open"
 	"context"
 	"errors"
@@ -38,6 +39,7 @@ type IdentifyImpl interface {
 type TmdbImpl interface {
 	CheckByNameAndYear(name string, year int, switchYear bool) (string, int64, int, error)
 	CheckByTmdbId(tmdbId int64) (string, int, error)
+	CheckSeasonByTmdbId(tmdbId int64, seasonNumber int) (*tmdb.SeasonDetail, error)
 }
 
 type categoryImpl interface {

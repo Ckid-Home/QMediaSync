@@ -3,6 +3,7 @@ package scrape
 import (
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
+	"Q115-STRM/internal/tmdb"
 	"context"
 	"errors"
 	"fmt"
@@ -65,4 +66,9 @@ func (t *TmdbMovieImpl) CheckByTmdbId(tmdbId int64) (string, int, error) {
 		return "", 0, err
 	}
 	return movieDetail.Title, helpers.ParseYearFromDate(movieDetail.ReleaseDate), nil
+}
+
+// 检查季是否存在
+func (t *TmdbMovieImpl) CheckSeasonByTmdbId(tmdbId int64, seasonNumber int) (*tmdb.SeasonDetail, error) {
+	return nil, nil
 }

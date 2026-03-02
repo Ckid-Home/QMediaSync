@@ -66,8 +66,12 @@ func (s *ScanLocalImpl) GetNetFileFiles() error {
 	s.wg = sync.WaitGroup{}
 	s.addPathToTasks(s.scrapePath.SourcePathId)
 	// 启动一个协程处理目录
-	helpers.AppLogger.Infof("开始处理目录 %s, 开启 %d 个任务", s.scrapePath.SourcePath, models.SettingsGlobal.FileDetailThreads)
-	for i := 0; i < models.SettingsGlobal.FileDetailThreads; i++ {
+	threads := models.SettingsGlobal.FileDetailThreads
+	if threads == 0 {
+		threads = 2
+	}
+	helpers.AppLogger.Infof("开始处理目录 %s, 开启 %d 个任务", s.scrapePath.SourcePath, threads)
+	for i := 0; i < threads; i++ {
 		// 在限速器控制下执行StartPathWork
 		go s.startPathWorkWithLimiter(i)
 	}

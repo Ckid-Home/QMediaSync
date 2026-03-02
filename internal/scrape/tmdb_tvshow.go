@@ -3,6 +3,7 @@ package scrape
 import (
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
+	"Q115-STRM/internal/tmdb"
 	"context"
 	"errors"
 	"fmt"
@@ -57,4 +58,15 @@ func (t *TmdbTvShowImpl) CheckByTmdbId(tmdbId int64) (string, int, error) {
 		return "", 0, err
 	}
 	return tvDetail.Name, helpers.ParseYearFromDate(tvDetail.FirstAirDate), nil
+}
+
+// 检查季是否存在
+func (t *TmdbTvShowImpl) CheckSeasonByTmdbId(tmdbId int64, seasonNumber int) (*tmdb.SeasonDetail, error) {
+	// 查询季详情
+	seasonDetail, err := t.Client.GetTvSeasonDetail(tmdbId, seasonNumber, models.GlobalScrapeSettings.GetTmdbLanguage())
+	if err != nil {
+		helpers.AppLogger.Errorf("查询tmdb电视剧季详情失败, 下次重试, 失败原因: %v", err)
+		return nil, err
+	}
+	return seasonDetail, nil
 }
