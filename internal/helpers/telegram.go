@@ -341,8 +341,16 @@ func (bot *TelegramBot) StartListening(ctx context.Context, handleCommand map[st
 		} else if update.CallbackQuery != nil {
 			// 处理按钮点击
 			bot.Client.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, ""))
-			cmd = update.CallbackQuery.Data
-			args = []string{}
+			data := update.CallbackQuery.Data
+			// 解析命令和参数
+			parts := strings.Fields(data)
+			if len(parts) > 0 {
+				cmd = parts[0]
+				args = parts[1:]
+			} else {
+				cmd = data
+				args = []string{}
+			}
 			chatID = update.CallbackQuery.Message.Chat.ID
 		} else {
 			continue
@@ -395,6 +403,7 @@ func (bot *TelegramBot) StartListening(ctx context.Context, handleCommand map[st
 				response.Text = "📊 <b>系统状态</b>\n运行中: OK\n时间: " + time.Now().Format("2006-01-02 15:04:05")
 			default:
 				response.Text = "❓ 未知命令，输入 /help 查看帮助"
+
 			}
 		}
 

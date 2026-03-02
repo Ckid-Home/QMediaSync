@@ -246,32 +246,32 @@ func runScrapeTaskSync(taskID uint) {
 
 // SyncStrmInc 执行增量STRM同步并在完成后发送通知
 // args: 可选参数，传入同步目录ID时只同步指定目录
-func SyncStrmInc(args []string) string {
+func SyncStrmInc(args []string) helpers.CommandResponse {
 	if errMsg, _ := checkAndExtractSingleParam(args); errMsg != "" {
-		return errMsg
+		return helpers.CommandResponse{Text: errMsg}
 	}
 	_, taskID := checkAndExtractSingleParam(args)
-	return runStrmTask(taskID, false)
+	return helpers.CommandResponse{Text: runStrmTask(taskID, false)}
 }
 
 // SyncStrnFull 执行全量STRM同步并在完成后发送通知
 // args: 可选参数，传入同步目录ID时只同步指定目录
-func SyncStrnFull(args []string) string {
+func SyncStrnFull(args []string) helpers.CommandResponse {
 	if errMsg, _ := checkAndExtractSingleParam(args); errMsg != "" {
-		return errMsg
+		return helpers.CommandResponse{Text: errMsg}
 	}
 	_, taskID := checkAndExtractSingleParam(args)
-	return runStrmTask(taskID, true)
+	return helpers.CommandResponse{Text: runStrmTask(taskID, true)}
 }
 
 // Scrape 执行刮削任务并在完成后发送通知
 // args: 可选参数，传入刮削目录ID时只执行指定目录的刮削
-func Scrape(args []string) string {
+func Scrape(args []string) helpers.CommandResponse {
 	if errMsg, _ := checkAndExtractSingleParam(args); errMsg != "" {
-		return errMsg
+		return helpers.CommandResponse{Text: errMsg}
 	}
 	_, taskID := checkAndExtractSingleParam(args)
-	return runScrapeTask(taskID)
+	return helpers.CommandResponse{Text: runScrapeTask(taskID)}
 }
 
 // waitForTasksCompletion 等待指定任务完成
@@ -609,9 +609,9 @@ func StartListenTelegramBot() {
 	mgr := notificationmanager.GlobalEnhancedNotificationManager
 
 	myCommands := map[string]func([]string) helpers.CommandResponse{
-		// "strm_inc":        SyncStrmInc,
-		// "strm_sync":       SyncStrnFull,
-		// "scrape":          Scrape,
+		"strm_inc":        SyncStrmInc,
+		"strm_sync":       SyncStrnFull,
+		"scrape":          Scrape,
 		"get_strm_path":   getStrmPath,
 		"get_scrape_path": getScrapePath,
 		// "scrape_strm": ScrapeThenStrm,
