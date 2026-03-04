@@ -542,7 +542,7 @@ func setRouter(r *gin.Engine) {
 				"isRelease": helpers.IsRelease,
 			})
 		})
-		// api.GET("/announce", controllers.GetAnnounce) // 获取公告
+		api.GET("/announce", controllers.GetAnnounce)                     // 获取公告
 		api.POST("/database/repair", controllers.RepairDB)                // 更新系统设置
 		api.POST("/auth/115-qrcode-open", controllers.GetLoginQrCodeOpen) // 获取115开放平台登录二维码
 		api.POST("/auth/115-qrcode-status", controllers.GetQrCodeStatus)  // 查询115二维码扫码状态
