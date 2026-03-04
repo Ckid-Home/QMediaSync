@@ -89,12 +89,13 @@ func RefreshOAuthAccessToken() {
 	now := time.Now().Unix()
 	for _, account := range accounts {
 		if account.RefreshToken == "" {
+			helpers.AppLogger.Infof("115账号 %d 没有刷新token，跳过", account.ID)
 			continue
 		}
 		if account.SourceType == models.SourceType115 {
 			// helpers.AppLogger.Infof("当前时间: %d, 过期时间：%d", now, account.TokenExpiriesTime-3600)
-			if account.TokenExpiriesTime-300 > now {
-				// helpers.AppLogger.Infof("115账号token未过期，账号ID: %d, 115用户名：%s， 过期时间：%s", account.ID, account.Username, time.Unix(account.TokenExpiriesTime-3600, 0).Format("2006-01-02 15:04:05"))
+			if account.TokenExpiriesTime-1800 > now {
+				helpers.AppLogger.Infof("115账号token未过期，账号ID: %d, 115用户名：%s， 过期时间：%s", account.ID, account.Username, time.Unix(account.TokenExpiriesTime-1800, 0).Format("2006-01-02 15:04:05"))
 				continue
 			}
 			helpers.AppLogger.Infof("开始刷新115账号token，账号ID: %d, 115用户名：%s", account.ID, account.Username)
@@ -242,7 +243,7 @@ func InitCron() {
 		// helpers.AppLogger.Info("清理过期的同步记录")
 		models.ClearExpiredSyncRecords(1) // 保留3天内的记录
 	})
-	GlobalCron.AddFunc("*/5 * * * *", func() {
+	GlobalCron.AddFunc("*/2 * * * *", func() {
 		// helpers.AppLogger.Info("定时刷新115的访问凭证")
 		RefreshOAuthAccessToken()
 	})
