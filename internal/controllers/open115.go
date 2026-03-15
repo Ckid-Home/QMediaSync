@@ -136,73 +136,6 @@ func GetFileDetail(c *gin.Context) {
 
 var keyLock KeyLockWithTimeout
 
-// 查询并302跳转到115文件直链
-// 请求下载链接的user-agent必须跟访问下载链接的user-agent相同
-func Get115FileUrl(c *gin.Context) {
-	type fileUrlReq struct {
-		AccountId uint   `json:"account_id" form:"account_id"`
-		PickCode  string `json:"pick_code" form:"pick_code"`
-		Force     int    `json:"force" form:"force"`
-	}
-
-	ua := c.Request.UserAgent()
-	var req fileUrlReq
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "参数错误", Data: nil})
-		return
-	}
-	if req.PickCode == "" {
-		c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "pick_code 参数不能为空", Data: nil})
-		return
-	}
-	helpers.AppLogger.Infof("检查是否具有302播放标记， force=%d", req.Force)
-	cacheKey := fmt.Sprintf("115url:%s, ua=%s", req.PickCode, ua)
-	helpers.AppLogger.Infof("准备获取115文件下载链接: pickcode=%s, ua=%s，8095播放=%d 加锁10秒", req.PickCode, ua, req.Force)
-	if keyLock.LockWithTimeout(cacheKey, 10*time.Second) {
-		defer keyLock.Unlock(cacheKey)
-		account, err := models.GetAccountById(req.AccountId)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, APIResponse[any]{Code: BadRequest, Message: "账号ID不存在", Data: nil})
-			return
-		}
-		client := account.Get115Client()
-
-		// helpers.AppLogger.Debugf("是否启用本地代理：%d", models.SettingsGlobal.LocalProxy)
-		if req.Force == 0 && models.SettingsGlobal.LocalProxy == 1 {
-			// 跳转到本地代理时使用统一的UA
-			ua = v115open.DEFAULTUA
-			helpers.AppLogger.Infof("因为8095标识=%d, 本地播放代理开关=%d，所以使用默认UA: %s", req.Force, models.SettingsGlobal.LocalProxy, ua)
-		}
-		cachedUrl := string(db.Cache.Get(cacheKey))
-		if cachedUrl == "" {
-			cachedUrl = client.GetDownloadUrl(context.Background(), req.PickCode, ua, true)
-			if cachedUrl == "" {
-				c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取115下载链接失败", Data: nil})
-				return
-			}
-			helpers.AppLogger.Infof("从接口中查询到115下载链接: pickcode=%s, ua=%s => %s", req.PickCode, ua, cachedUrl)
-			// 缓存半小时
-			db.Cache.Set(cacheKey, []byte(cachedUrl), 1800)
-		} else {
-			helpers.AppLogger.Infof("从缓存中查询到115下载链接: pickcode=%s, ua=%s => %s", req.PickCode, ua, cachedUrl)
-		}
-		if req.Force == 0 {
-			if models.SettingsGlobal.LocalProxy == 1 {
-				// 跳转到本地代理
-				helpers.AppLogger.Infof("通过本地代理访问115下载链接，非302播放: %s", cachedUrl)
-				proxyUrl := fmt.Sprintf("/proxy-115?url=%s", url.QueryEscape(cachedUrl))
-				c.Redirect(http.StatusFound, proxyUrl)
-			} else {
-				helpers.AppLogger.Infof("302重定向到115下载链接，非302播放: %s", cachedUrl)
-				c.Redirect(http.StatusFound, cachedUrl)
-			}
-		} else {
-			helpers.AppLogger.Infof("302重定向到115下载链接， 302播放: %s", cachedUrl)
-			c.Redirect(http.StatusFound, cachedUrl)
-		}
-	}
-}
-
 // Get115UrlByPickCode 查询115直链并重定向
 // @Summary 获取115文件直链
 // @Description 根据pickcode查询115文件直链并按需302跳转
@@ -267,6 +200,14 @@ func Get115UrlByPickCode(c *gin.Context) {
 			helpers.AppLogger.Infof("因为直链标识=%d, 本地播放代理开关=%d，所以使用默认UA: %s", req.Force, models.SettingsGlobal.LocalProxy, ua)
 		}
 		cachedUrl := string(db.Cache.Get(cacheKey))
+		if cachedUrl != "" {
+			helpers.AppLogger.Infof("从缓存中查询到115下载链接: pickcode=%s, ua=%s => %s", pickCode, ua, cachedUrl)
+			if !checkURLValidity(cachedUrl, ua) {
+				helpers.AppLogger.Infof("缓存链接已失效，删除缓存并重新获取: pickcode=%s", req.PickCode)
+				db.Cache.Delete(cacheKey)
+				cachedUrl = ""
+			}
+		}
 		if cachedUrl == "" {
 			cachedUrl = client.GetDownloadUrl(context.Background(), pickCode, ua, true)
 			if cachedUrl == "" {
@@ -276,8 +217,6 @@ func Get115UrlByPickCode(c *gin.Context) {
 			helpers.AppLogger.Infof("从接口中查询到115下载链接: pickcode=%s, ua=%s => %s", pickCode, ua, cachedUrl)
 			// 缓存50分钟
 			db.Cache.Set(cacheKey, []byte(cachedUrl), 3000)
-		} else {
-			helpers.AppLogger.Infof("从缓存中查询到115下载链接: pickcode=%s, ua=%s => %s", pickCode, ua, cachedUrl)
 		}
 		if req.Force == 0 {
 			if models.SettingsGlobal.LocalProxy == 1 {
@@ -685,4 +624,44 @@ func CleanOldRequestStats(c *gin.Context) {
 	helpers.AppLogger.Infof("已清理 %d 天前的请求统计数据", req.Days)
 
 	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: fmt.Sprintf("已清理 %d 天前的请求统计数据", req.Days), Data: nil})
+}
+
+// checkURLValidity 使用HEAD请求检查URL是否有效
+// 返回true表示URL有效（2xx状态码），false表示URL已失效
+// ua参数：必须使用当前请求的USER-AGENT访问115链接（否则返回403）
+func checkURLValidity(urlStr string, ua string) bool {
+	client := &http.Client{
+		Timeout: 3 * time.Second, // 3秒超时
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// 不跟随重定向，只检查第一次响应
+			return http.ErrUseLastResponse
+		},
+	}
+
+	req, err := http.NewRequest("HEAD", urlStr, nil)
+	if err != nil {
+		helpers.AppLogger.Errorf("创建HEAD请求失败: %v", err)
+		return false
+	}
+
+	// 设置User-Agent，这是关键！115链接必须使用请求时的UA
+	if ua != "" {
+		req.Header.Set("User-Agent", ua)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		helpers.AppLogger.Errorf("HEAD请求失败: %v", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	// 2xx状态码表示有效
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		helpers.AppLogger.Infof("URL有效性检查通过: 状态码=%d", resp.StatusCode)
+		return true
+	}
+
+	helpers.AppLogger.Infof("URL已失效: 状态码=%d", resp.StatusCode)
+	return false
 }

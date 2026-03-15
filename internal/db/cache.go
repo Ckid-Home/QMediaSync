@@ -43,3 +43,9 @@ func (c *CacheGlobal) Get(key string) []byte {
 	}
 	return value
 }
+
+func (c *CacheGlobal) Delete(key string) {
+	keyHash := helpers.MD5Hash(key)
+	keyBytes := []byte(keyHash)
+	c.CacheInstance.Del(keyBytes)
+}
