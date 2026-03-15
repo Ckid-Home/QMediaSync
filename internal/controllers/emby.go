@@ -579,6 +579,9 @@ func formatSeasonEpisodes(seasons map[int][]int) string {
 		if len(episodes) == 0 {
 			continue
 		}
+		// 去重处理，避免同一集多次触发事件导致重复显示
+		episodes = removeDuplicates(episodes)
+
 		sort.Ints(episodes)
 		seasonStr := fmt.Sprintf("S%d", seasonNumber)
 
@@ -606,4 +609,16 @@ func formatSeasonEpisodes(seasons map[int][]int) string {
 	}
 
 	return strings.Join(seasonStrArr, "; ")
+}
+
+func removeDuplicates(episodes []int) []int {
+	seen := make(map[int]struct{})
+	result := make([]int, 0, len(episodes))
+	for _, ep := range episodes {
+		if _, exists := seen[ep]; !exists {
+			seen[ep] = struct{}{}
+			result = append(result, ep)
+		}
+	}
+	return result
 }
