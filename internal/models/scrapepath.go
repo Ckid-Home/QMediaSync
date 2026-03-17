@@ -171,6 +171,21 @@ func (m *ScrapePath) Save() error {
 	} else {
 		m.DeletedKeyword = ""
 	}
+
+	// 处理 cron 相关字段
+	if m.CronExpression != "" {
+		// 解析 cron 表达式为描述
+		m.CronDescription = m.ParseCronDescription(m.CronExpression)
+		// 计算下次执行时间
+		nextRun, err := m.GetNextCronRun(m.CronExpression)
+		if err == nil {
+			m.NextCronRun = nextRun.Format("2006-01-02 15:04:05")
+		}
+		m.CronEnabled = 1
+	} else {
+		m.CronEnabled = 0
+	}
+
 	if m.ID == 0 {
 		if m.MaxThreads > DEFAULT_LOCAL_MAX_THREADS {
 			if m.SourceType != SourceTypeLocal || GlobalScrapeSettings.TmdbApiKey == "" {
@@ -223,6 +238,18 @@ func (m *ScrapePath) Save() error {
 			"force_delete_source_path": m.ForceDeleteSourcePath,
 			"enable_fanart_tv":         m.EnableFanartTv,
 			"max_threads":              m.MaxThreads,
+			"enable_cron":              m.EnableCron,
+			"cron_expression":          m.CronExpression,
+			"cron_description":         m.CronDescription,
+			"cron_enabled":             m.CronEnabled,
+		}
+
+		// 如果提供了 cron 表达式，则更新 next_cron_run
+		if m.CronExpression != "" {
+			nextRun, err := m.GetNextCronRun(m.CronExpression)
+			if err == nil {
+				updates["next_cron_run"] = nextRun.Format("2006-01-02 15:04:05")
+			}
 		}
 		helpers.AppLogger.Infof("更新的数据：%+v", updates)
 		if oldScrapePath.ScrapeType != ScrapeTypeOnly && m.ScrapeType == ScrapeTypeOnly {
