@@ -67,8 +67,8 @@ Filemanagercopy Method for Filemanagercopy
 
 filemanager copy
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiFilemanagercopyRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiFilemanagercopyRequest
 */
 func (a *FilemanagerApiService) Filemanagercopy(ctx _context.Context) ApiFilemanagercopyRequest {
 	return ApiFilemanagercopyRequest{
@@ -197,8 +197,8 @@ Filemanagerdelete Method for Filemanagerdelete
 
 filemanager delete
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiFilemanagerdeleteRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiFilemanagerdeleteRequest
 */
 func (a *FilemanagerApiService) Filemanagerdelete(ctx _context.Context) ApiFilemanagerdeleteRequest {
 	return ApiFilemanagerdeleteRequest{
@@ -327,8 +327,8 @@ Filemanagermove Method for Filemanagermove
 
 filemanager move
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiFilemanagermoveRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiFilemanagermoveRequest
 */
 func (a *FilemanagerApiService) Filemanagermove(ctx _context.Context) ApiFilemanagermoveRequest {
 	return ApiFilemanagermoveRequest{
@@ -457,8 +457,8 @@ Filemanagerrename Method for Filemanagerrename
 
 filemanager rename
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiFilemanagerrenameRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiFilemanagerrenameRequest
 */
 func (a *FilemanagerApiService) Filemanagerrename(ctx _context.Context) ApiFilemanagerrenameRequest {
 	return ApiFilemanagerrenameRequest{

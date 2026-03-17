@@ -61,8 +61,8 @@ OauthTokenCode2token Method for OauthTokenCode2token
 
 get accesstoken by authorization code
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiOauthTokenCode2tokenRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiOauthTokenCode2tokenRequest
 */
 func (a *AuthApiService) OauthTokenCode2token(ctx _context.Context) ApiOauthTokenCode2tokenRequest {
 	return ApiOauthTokenCode2tokenRequest{
@@ -72,7 +72,8 @@ func (a *AuthApiService) OauthTokenCode2token(ctx _context.Context) ApiOauthToke
 }
 
 // Execute executes the request
-//  @return OauthTokenAuthorizationCodeResponse
+//
+//	@return OauthTokenAuthorizationCodeResponse
 func (a *AuthApiService) OauthTokenCode2tokenExecute(r ApiOauthTokenCode2tokenRequest) (OauthTokenAuthorizationCodeResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet
@@ -187,8 +188,8 @@ OauthTokenDeviceCode Method for OauthTokenDeviceCode
 
 get device code and user code
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiOauthTokenDeviceCodeRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiOauthTokenDeviceCodeRequest
 */
 func (a *AuthApiService) OauthTokenDeviceCode(ctx _context.Context) ApiOauthTokenDeviceCodeRequest {
 	return ApiOauthTokenDeviceCodeRequest{
@@ -198,7 +199,8 @@ func (a *AuthApiService) OauthTokenDeviceCode(ctx _context.Context) ApiOauthToke
 }
 
 // Execute executes the request
-//  @return OauthTokenDeviceCodeResponse
+//
+//	@return OauthTokenDeviceCodeResponse
 func (a *AuthApiService) OauthTokenDeviceCodeExecute(r ApiOauthTokenDeviceCodeRequest) (OauthTokenDeviceCodeResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet
@@ -310,8 +312,8 @@ OauthTokenDeviceToken Method for OauthTokenDeviceToken
 
 get access_token
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiOauthTokenDeviceTokenRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiOauthTokenDeviceTokenRequest
 */
 func (a *AuthApiService) OauthTokenDeviceToken(ctx _context.Context) ApiOauthTokenDeviceTokenRequest {
 	return ApiOauthTokenDeviceTokenRequest{
@@ -321,7 +323,8 @@ func (a *AuthApiService) OauthTokenDeviceToken(ctx _context.Context) ApiOauthTok
 }
 
 // Execute executes the request
-//  @return OauthTokenDeviceTokenResponse
+//
+//	@return OauthTokenDeviceTokenResponse
 func (a *AuthApiService) OauthTokenDeviceTokenExecute(r ApiOauthTokenDeviceTokenRequest) (OauthTokenDeviceTokenResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet
@@ -437,8 +440,8 @@ OauthTokenRefreshToken Method for OauthTokenRefreshToken
 
 authorization code
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiOauthTokenRefreshTokenRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiOauthTokenRefreshTokenRequest
 */
 func (a *AuthApiService) OauthTokenRefreshToken(ctx _context.Context) ApiOauthTokenRefreshTokenRequest {
 	return ApiOauthTokenRefreshTokenRequest{
@@ -448,7 +451,8 @@ func (a *AuthApiService) OauthTokenRefreshToken(ctx _context.Context) ApiOauthTo
 }
 
 // Execute executes the request
-//  @return OauthTokenRefreshTokenResponse
+//
+//	@return OauthTokenRefreshTokenResponse
 func (a *AuthApiService) OauthTokenRefreshTokenExecute(r ApiOauthTokenRefreshTokenRequest) (OauthTokenRefreshTokenResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet

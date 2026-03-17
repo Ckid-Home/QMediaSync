@@ -81,8 +81,8 @@ Xpanfiledoclist Method for Xpanfiledoclist
 
 file doclist
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiXpanfiledoclistRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiXpanfiledoclistRequest
 */
 func (a *FileinfoApiService) Xpanfiledoclist(ctx _context.Context) ApiXpanfiledoclistRequest {
 	return ApiXpanfiledoclistRequest{
@@ -92,7 +92,8 @@ func (a *FileinfoApiService) Xpanfiledoclist(ctx _context.Context) ApiXpanfiledo
 }
 
 // Execute executes the request
-//  @return string
+//
+//	@return string
 func (a *FileinfoApiService) XpanfiledoclistExecute(r ApiXpanfiledoclistRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet
@@ -246,8 +247,8 @@ Xpanfileimagelist Method for Xpanfileimagelist
 
 file imagelist
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiXpanfileimagelistRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiXpanfileimagelistRequest
 */
 func (a *FileinfoApiService) Xpanfileimagelist(ctx _context.Context) ApiXpanfileimagelistRequest {
 	return ApiXpanfileimagelistRequest{
@@ -257,7 +258,8 @@ func (a *FileinfoApiService) Xpanfileimagelist(ctx _context.Context) ApiXpanfile
 }
 
 // Execute executes the request
-//  @return string
+//
+//	@return string
 func (a *FileinfoApiService) XpanfileimagelistExecute(r ApiXpanfileimagelistRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet
@@ -416,8 +418,8 @@ Xpanfilelist Method for Xpanfilelist
 
 file list
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiXpanfilelistRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiXpanfilelistRequest
 */
 func (a *FileinfoApiService) Xpanfilelist(ctx _context.Context) ApiXpanfilelistRequest {
 	return ApiXpanfilelistRequest{
@@ -427,7 +429,8 @@ func (a *FileinfoApiService) Xpanfilelist(ctx _context.Context) ApiXpanfilelistR
 }
 
 // Execute executes the request
-//  @return string
+//
+//	@return string
 func (a *FileinfoApiService) XpanfilelistExecute(r ApiXpanfilelistRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet
@@ -579,8 +582,8 @@ Xpanfilesearch Method for Xpanfilesearch
 
 file search
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiXpanfilesearchRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiXpanfilesearchRequest
 */
 func (a *FileinfoApiService) Xpanfilesearch(ctx _context.Context) ApiXpanfilesearchRequest {
 	return ApiXpanfilesearchRequest{
@@ -590,7 +593,8 @@ func (a *FileinfoApiService) Xpanfilesearch(ctx _context.Context) ApiXpanfilesea
 }
 
 // Execute executes the request
-//  @return string
+//
+//	@return string
 func (a *FileinfoApiService) XpanfilesearchExecute(r ApiXpanfilesearchRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet

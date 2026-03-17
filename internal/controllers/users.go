@@ -12,8 +12,9 @@ import (
 )
 
 type LoginRequest struct {
-	Username string `json:"username" form:"username"`
-	Password string `json:"password" form:"password"`
+	Username   string `json:"username" form:"username"`
+	Password   string `json:"password" form:"password"`
+	RememberMe bool   `json:"rememberMe" form:"rememberMe"`
 }
 
 var LoginedUser *models.User = nil
@@ -49,11 +50,18 @@ func LoginAction(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, APIResponse[any]{Code: BadRequest, Message: fmt.Sprintf("用户不存在或者密码错误: %v", userErr), Data: nil})
 		return
 	}
+
+	// 根据 rememberMe 参数设置 token 有效期
+	tokenExpire := time.Hour * 24 // 默认24小时
+	if req.RememberMe {
+		tokenExpire = time.Hour * 24 * 30 // 记住我：30天
+	}
+
 	claims := &LoginUser{
 		ID:       user.ID,
 		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(96 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenExpire)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -63,6 +71,17 @@ func LoginAction(c *gin.Context) {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "登录失败，请重试", Data: nil})
 		return
 	}
+
+	// 设置 HttpOnly Cookie
+	c.SetCookie(
+		"auth_token",               // Cookie 名称
+		tokenString,                // Cookie 值
+		int(tokenExpire.Seconds()), // MaxAge（秒）
+		"/",                        // Path
+		"",                         // Domain（空表示当前域名）
+		false,                      // Secure（false 兼容飞牛 HTTP 环境）
+		true,                       // HttpOnly（防止 XSS 攻击）
+	)
 	LoginedUser = user
 	res := make(map[string]interface{})
 	u := make(map[string]string)

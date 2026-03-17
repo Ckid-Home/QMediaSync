@@ -61,20 +61,30 @@ func JWTAuthMiddleware() func(c *gin.Context) {
 		}
 
 		// 回退到 JWT Token 验证
-		authHeader := c.Request.Header.Get("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, APIResponse[any]{Code: BadRequest, Message: "Token不存在", Data: nil})
-			c.Abort()
-			return
+		// 1. 优先从 Cookie 获取 token
+		var tokenString string
+		cookie, err := c.Request.Cookie("auth_token")
+		if err == nil && cookie.Value != "" {
+			tokenString = cookie.Value
+			helpers.AppLogger.Debugf("从 Cookie 获取 token")
+		} else {
+			// 2. Cookie 不存在时，从 Authorization Header 获取
+			authHeader := c.Request.Header.Get("Authorization")
+			if authHeader == "" {
+				c.JSON(http.StatusUnauthorized, APIResponse[any]{Code: BadRequest, Message: "Token不存在", Data: nil})
+				c.Abort()
+				return
+			}
+			// 按空格分割
+			parts := strings.Split(authHeader, ".")
+			if len(parts) != 3 {
+				c.JSON(http.StatusUnauthorized, APIResponse[any]{Code: BadRequest, Message: "Token格式有误", Data: nil})
+				c.Abort()
+				return
+			}
+			tokenString = strings.Replace(authHeader, "Bearer ", "", 1)
+			helpers.AppLogger.Debugf("从 Authorization Header 获取 token")
 		}
-		// 按空格分割
-		parts := strings.Split(authHeader, ".")
-		if len(parts) != 3 {
-			c.JSON(http.StatusUnauthorized, APIResponse[any]{Code: BadRequest, Message: "Token格式有误", Data: nil})
-			c.Abort()
-			return
-		}
-		tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
 		// helpers.AppLogger.Debugf("tokenString: %s", tokenString)
 		loginUser, err := ValidateJWT(tokenString)
 		if err != nil {

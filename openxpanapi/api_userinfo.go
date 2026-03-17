@@ -56,8 +56,8 @@ Apiquota Method for Apiquota
 
 api quota
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiApiquotaRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiApiquotaRequest
 */
 func (a *UserinfoApiService) Apiquota(ctx _context.Context) ApiApiquotaRequest {
 	return ApiApiquotaRequest{
@@ -67,7 +67,8 @@ func (a *UserinfoApiService) Apiquota(ctx _context.Context) ApiApiquotaRequest {
 }
 
 // Execute executes the request
-//  @return Quotaresponse
+//
+//	@return Quotaresponse
 func (a *UserinfoApiService) ApiquotaExecute(r ApiApiquotaRequest) (Quotaresponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet
@@ -171,8 +172,8 @@ Xpannasuinfo Method for Xpannasuinfo
 
 user info
 
- @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @return ApiXpannasuinfoRequest
+	@param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiXpannasuinfoRequest
 */
 func (a *UserinfoApiService) Xpannasuinfo(ctx _context.Context) ApiXpannasuinfoRequest {
 	return ApiXpannasuinfoRequest{
@@ -182,7 +183,8 @@ func (a *UserinfoApiService) Xpannasuinfo(ctx _context.Context) ApiXpannasuinfoR
 }
 
 // Execute executes the request
-//  @return Uinforesponse
+//
+//	@return Uinforesponse
 func (a *UserinfoApiService) XpannasuinfoExecute(r ApiXpannasuinfoRequest) (Uinforesponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod  = _nethttp.MethodGet
