@@ -177,9 +177,13 @@ func Webhook(ctx *gin.Context) {
 	}
 	if event.Event == "library.deleted" {
 		// 删除媒体通知
-		if helpers.IsRelease {
-			helpers.AppLogger.Infof("Emby媒体已删除 %+v", event.Item)
-		}
+		// if helpers.IsRelease {
+		helpers.AppLogger.Infof("Emby媒体已删除 %+v", event.Item)
+		// 输出权限
+		helpers.AppLogger.Infof("Emby媒体删除权限 %d", models.GlobalEmbyConfig.EnableDeleteNetdisk)
+		// 要删除的媒体类型
+		helpers.AppLogger.Infof("Emby媒体删除类型 %s", event.Item.Type)
+		// }
 		// 触发通知
 		// 删除消息也应该按照新入库消息一样对剧集进行分组
 		go func() {
