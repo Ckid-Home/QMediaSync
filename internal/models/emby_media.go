@@ -590,55 +590,118 @@ func DeleteNetdiskTvshowByItemId(itemId string) error {
 	return nil
 }
 
+// 删除 115 文件（视频 + 元数据），增加详细调试日志
 func delete115Files(client *v115open.OpenClient, syncFile SyncFile, metaFiles []SyncFile) (bool, error) {
+	// 记录主视频文件信息
+	helpers.AppLogger.Infof("[DEBUG-DELETE] 准备删除主视频文件 - 路径：%s, 文件名：%s, FileId: %s, ParentId: %s",
+		syncFile.Path, syncFile.FileName, syncFile.FileId, syncFile.ParentId)
+
+	// 记录元数据文件信息
+	for i, mf := range metaFiles {
+		helpers.AppLogger.Infof("[DEBUG-DELETE] 准备删除元数据文件 [%d] - 路径：%s, 文件名：%s, FileId: %s",
+			i+1, mf.Path, mf.FileName, mf.FileId)
+	}
+
+	// 收集所有要删除的 FileId
 	fileIdsToDelete := []string{syncFile.FileId}
 	for _, mf := range metaFiles {
 		fileIdsToDelete = append(fileIdsToDelete, mf.FileId)
 	}
+
+	// 记录总删除文件数和 FileId 列表
+	helpers.AppLogger.Infof("[DEBUG-DELETE] 总共准备删除 %d 个文件，FileId 列表：%v",
+		len(fileIdsToDelete), fileIdsToDelete)
+
+	// 调用 115 删除 API
 	success, delErr := client.Del(context.Background(), fileIdsToDelete, syncFile.ParentId)
+
+	// 记录删除结果
+	helpers.AppLogger.Infof("[DEBUG-DELETE] 115 网盘文件删除%s - 成功：%v, FileId 列表：%v",
+		map[bool]string{true: "成功", false: "失败"}[success], success, fileIdsToDelete)
+
+	if delErr != nil {
+		helpers.AppLogger.Errorf("[DEBUG-DELETE] 115 网盘文件删除失败 - 错误：%v", delErr)
+	}
+
 	return success, delErr
 }
 
+// 删除 115 文件夹，增加详细调试日志
 func delete115Folders(client *v115open.OpenClient, delPath string, syncPathId uint, itemId string) (bool, error) {
+	// 记录基本信息
+	helpers.AppLogger.Infof("[DEBUG-DELETE] 准备删除目录 - Emby ItemId: %s, 删除路径：%s, SyncPathId: %d",
+		itemId, delPath, syncPathId)
+
 	// 删除整个目录
 	if delPath == "" || delPath == "." || delPath == "/" {
 		// 到了根目录，不能删除
-		helpers.AppLogger.Errorf("删除网盘目录失败: 已到达根目录 %s", delPath)
+		helpers.AppLogger.Errorf("[DEBUG-DELETE] 删除网盘目录失败 - 已到达根目录 %s", delPath)
 		return false, nil
 	}
+
 	pathParent := filepath.ToSlash(filepath.Dir(delPath))
 	pathParentId := ""
 	pathParentStr := ""
+
 	if pathParent == "" || pathParent == "." || pathParent == "/" {
-		// 到了根目录，取SyncPath.SourcePathId
+		// 到了根目录，取 SyncPath.SourcePathId
+		helpers.AppLogger.Infof("[DEBUG-DELETE] 已到达根目录，使用 SyncPath 的 BaseCid - SyncPathId: %d", syncPathId)
+
 		syncPath := GetSyncPathById(syncPathId)
 		if syncPath == nil {
-			helpers.AppLogger.Errorf("查询SyncPath %d 失败", syncPathId)
+			helpers.AppLogger.Errorf("[DEBUG-DELETE] 查询 SyncPath %d 失败", syncPathId)
 			return false, nil
 		}
+
 		pathParentId = syncPath.BaseCid
 		pathParentStr = syncPath.RemotePath
+
+		helpers.AppLogger.Infof("[DEBUG-DELETE] 使用 SyncPath 信息 - ParentId: %s, ParentPath: %s",
+			pathParentId, pathParentStr)
 	} else {
-		// 查询pathParent的file_id
+		// 查询 pathParent 的 file_id
+		helpers.AppLogger.Infof("[DEBUG-DELETE] 查询父目录 - 父路径：%s", pathParent)
+
 		parentPath := SyncFile{}
 		if err := db.Db.Where("path = ?", pathParent).First(&parentPath).Error; err != nil {
-			helpers.AppLogger.Errorf("查询电影文件夹的父路径 %s 失败: %v", pathParent, err)
+			helpers.AppLogger.Errorf("[DEBUG-DELETE] 查询电影文件夹的父路径 %s 失败：%v", pathParent, err)
 			return false, nil
 		}
+
 		pathParentId = parentPath.FileId
 		pathParentStr = parentPath.Path
+
+		helpers.AppLogger.Infof("[DEBUG-DELETE] 父目录查询成功 - ParentId: %s, ParentPath: %s",
+			pathParentId, pathParentStr)
 	}
-	// 查询path的file_id
+
+	// 查询 path 的 file_id
+	helpers.AppLogger.Infof("[DEBUG-DELETE] 查询目标目录 - 路径：%s", delPath)
+
 	path := SyncFile{}
 	if err := db.Db.Where("path = ?", delPath).First(&path).Error; err != nil {
-		helpers.AppLogger.Errorf("查询网盘路径 %s 失败: %v", delPath, err)
+		helpers.AppLogger.Errorf("[DEBUG-DELETE] 查询网盘路径 %s 失败：%v", delPath, err)
 		return false, err
 	}
+
+	helpers.AppLogger.Infof("[DEBUG-DELETE] 目标目录查询成功 - FileId: %s, ParentId: %s, 路径：%s",
+		path.FileId, pathParentId, path.Path)
+
+	// 调用 115 删除 API
 	success, delErr := client.Del(context.Background(), []string{path.FileId}, pathParentId)
+
+	// 记录删除结果
 	if delErr != nil {
+		helpers.AppLogger.Errorf("[DEBUG-DELETE] 115 网盘目录删除失败 - FileId: %s, ParentId: %s, 错误：%v",
+			path.FileId, pathParentId, delErr)
 		return success, delErr
 	}
-	helpers.AppLogger.Infof("删除Emby Item %s 关联的网盘电影目录 %s=>%s 成功", itemId, pathParentId, pathParentStr)
+
+	helpers.AppLogger.Infof("[DEBUG-DELETE] 115 网盘目录删除成功 - FileId: %s, ParentId: %s, ParentPath: %s, Emby ItemId: %s",
+		path.FileId, pathParentId, pathParentStr, itemId)
+
+	helpers.AppLogger.Infof("删除 Emby Item %s 关联的网盘电影目录 %s=>%s 成功", itemId, pathParentId, pathParentStr)
+
 	return success, delErr
 }
 
