@@ -218,7 +218,6 @@ func ProxyOriginalResource(c *gin.Context) {
 	// matchedWin, _ := regexp.MatchString(pattern, embyPath)
 	// if strings.HasPrefix(embyPath, "/") || matchedWin || !strings.Contains(embyPath, "/proxy-115") {
 	ProxyOrigin(c)
-	return
 	// }
 	// Redirect2OpenlistLink(c)
 }

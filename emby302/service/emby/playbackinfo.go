@@ -494,7 +494,7 @@ func fetchFullPlaybackInfo(itemInfo ItemInfo) (*jsons.Item, error) {
 		return nil, fmt.Errorf("获取全量 PlaybackInfo 失败, code: %d", resp.StatusCode)
 	}
 
-	bodyJson, err := jsons.Read(resp.Body)
+	bodyJson, err := jsons.Read(resp.Body, resp.ContentLength)
 	if err != nil {
 		return nil, fmt.Errorf("获取全量 PlaybackInfo 失败: %v", err)
 	}

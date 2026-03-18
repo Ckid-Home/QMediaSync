@@ -250,6 +250,9 @@ func (i *IdTvShowImpl) extractInfoByREV2(mediaFile *models.ScrapeMediaFile) (*he
 	// 从文件名中获取媒体信息
 	info := helpers.ExtractMediaInfoRe(filename, false, false, i.scrapePath.VideoExtList, i.scrapePath.DeleteKeyword...)
 	helpers.AppLogger.Infof("正则从文件名中提取信息，文件名 %s， 提取结果 %+v", filename, info)
+	// 保存发布组和资源类型
+	mediaFile.ReleaseGroup = info.ReleaseGroup
+	mediaFile.ResourceType = info.ResourceType
 	info, err := i.find(mediaFile, info.TmdbId, info.Name, info.Year)
 	if err == nil {
 		return info, nil
@@ -257,6 +260,13 @@ func (i *IdTvShowImpl) extractInfoByREV2(mediaFile *models.ScrapeMediaFile) (*he
 	// 从文件夹中提取信息
 	folderInfo := helpers.ExtractMediaInfoRe(folderName, true, false, i.scrapePath.VideoExtList, i.scrapePath.DeleteKeyword...)
 	helpers.AppLogger.Infof("正则从文件夹中提取信息，文件夹 %s， 提取结果 %+v", folderName, folderInfo)
+	// 如果文件名没有提取到发布组或资源类型，尝试从文件夹提取
+	if mediaFile.ReleaseGroup == "" && folderInfo.ReleaseGroup != "" {
+		mediaFile.ReleaseGroup = folderInfo.ReleaseGroup
+	}
+	if mediaFile.ResourceType == "" && folderInfo.ResourceType != "" {
+		mediaFile.ResourceType = folderInfo.ResourceType
+	}
 	newInfo, ferr := i.find(mediaFile, folderInfo.TmdbId, folderInfo.Name, folderInfo.Year)
 	if ferr == nil {
 		return newInfo, nil

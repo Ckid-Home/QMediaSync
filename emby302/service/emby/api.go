@@ -52,7 +52,7 @@ func RawFetch(uri, method string, header http.Header, body io.ReadCloser) (model
 	defer resp.Body.Close()
 
 	// 读取响应
-	result, err := jsons.Read(resp.Body)
+	result, err := jsons.Read(resp.Body, resp.ContentLength)
 	if err != nil {
 		return model.HttpRes[*jsons.Item]{Code: http.StatusBadRequest, Msg: "解析响应失败: " + err.Error()}, nil
 	}

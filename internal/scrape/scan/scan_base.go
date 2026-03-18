@@ -261,7 +261,11 @@ func (m *scanBaseImpl) ExtractSeasonEpisode(mediaFile *models.ScrapeMediaFile) e
 		}
 		mediaFile.EpisodeNumber = info.Episode
 		mediaFile.SeasonNumber = info.Season
+		// 保存发布组和资源类型
+		mediaFile.ReleaseGroup = info.ReleaseGroup
+		mediaFile.ResourceType = info.ResourceType
 		helpers.AppLogger.Infof("从文件名中提取到季集: %s %d, %d", mediaFile.VideoFilename, mediaFile.SeasonNumber, mediaFile.EpisodeNumber)
+		helpers.AppLogger.Infof("从文件名中提取到发布组: %s, 资源类型: %s", mediaFile.ReleaseGroup, mediaFile.ResourceType)
 	}
 	if mediaFile.SeasonNumber == -1 {
 		// 从父目录中提取季数

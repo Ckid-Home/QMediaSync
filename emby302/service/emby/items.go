@@ -156,7 +156,11 @@ func ProxyAddItemsPreviewInfo(c *gin.Context) {
 		checkErr(c, fmt.Errorf("emby 远程返回了错误的响应码: %d", resp.StatusCode))
 		return
 	}
-	resJson, err := jsons.Read(resp.Body)
+
+	// 获取 Content-Length 用于验证数据完整性
+	contentLength := resp.ContentLength
+
+	resJson, err := jsons.Read(resp.Body, contentLength)
 	if checkErr(c, err) {
 		return
 	}
@@ -231,6 +235,43 @@ func ProxyAddItemsPreviewInfo(c *gin.Context) {
 	})
 }
 
+// validateItemStructure 验证单个 item 是否包含必需字段
+func validateItemStructure(item *jsons.Item) bool {
+	if item == nil || item.Type() != jsons.JsonTypeObj {
+		return false
+	}
+
+	// 检查必需字段是否存在
+	requiredFields := []string{"Id", "Name", "Type", "MediaType"}
+	for _, field := range requiredFields {
+		if fieldVal, ok := item.Attr(field).Done(); !ok || fieldVal.Empty() {
+			return false
+		}
+	}
+
+	return true
+}
+
+// validateLatestItems 验证 Latest Items 响应的完整性
+func validateLatestItems(resJson *jsons.Item) bool {
+	// 必须是数组类型
+	if resJson.Type() != jsons.JsonTypeArr {
+		return false
+	}
+
+	// 遍历验证每个 item
+	isInvalid := false
+	resJson.RangeArr(func(_ int, item *jsons.Item) error {
+		if !validateItemStructure(item) {
+			isInvalid = true
+			return jsons.ErrBreakRange
+		}
+		return nil
+	})
+
+	return !isInvalid
+}
+
 // ProxyLatestItems 代理 Latest 请求
 func ProxyLatestItems(c *gin.Context) {
 	// 代理请求
@@ -246,21 +287,28 @@ func ProxyLatestItems(c *gin.Context) {
 		checkErr(c, fmt.Errorf("emby 远程返回了错误的响应码: %d", resp.StatusCode))
 		return
 	}
-	resJson, err := jsons.Read(resp.Body)
-	if checkErr(c, err) {
+
+	// 获取 Content-Length 用于验证数据完整性
+	contentLength := resp.ContentLength
+
+	// 读取并验证数据长度
+	resJson, err := jsons.Read(resp.Body, contentLength)
+	if err != nil {
+		logs.Error("Latest Items 数据读取失败: %v, 返回空数组", err)
+		https.CloneHeader(c.Writer, resp.Header)
+		jsons.OkResp(c.Writer, jsons.NewEmptyArr())
 		return
 	}
 
-	// 预响应请求
-	defer func() {
+	// 验证数据完整性
+	if !validateLatestItems(resJson) {
+		logs.Error("Latest Items 数据结构不完整, 返回空数组")
 		https.CloneHeader(c.Writer, resp.Header)
-		jsons.OkResp(c.Writer, resJson)
-	}()
+		jsons.OkResp(c.Writer, jsons.NewEmptyArr())
+		return
+	}
 
 	// 遍历 MediaSources 解码 path
-	if resJson.Type() != jsons.JsonTypeArr {
-		return
-	}
 	resJson.RangeArr(func(_ int, item *jsons.Item) error {
 		mediaSources, ok := item.Attr("MediaSources").Done()
 		if !ok || mediaSources.Type() != jsons.JsonTypeArr || mediaSources.Empty() {
@@ -275,4 +323,7 @@ func ProxyLatestItems(c *gin.Context) {
 		return nil
 	})
 
+	// 所有验证通过后，响应数据
+	https.CloneHeader(c.Writer, resp.Header)
+	jsons.OkResp(c.Writer, resJson)
 }

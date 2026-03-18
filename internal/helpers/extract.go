@@ -49,11 +49,13 @@ var preExclucdePatterns = []string{
 }
 
 type MediaInfo struct {
-	Name    string `json:"name"`
-	Year    int    `json:"year"`
-	Season  int    `json:"season"`
-	Episode int    `json:"episode"`
-	TmdbId  int64  `json:"tmdbid"`
+	Name         string `json:"name"`
+	Year         int    `json:"year"`
+	Season       int    `json:"season"`
+	Episode      int    `json:"episode"`
+	TmdbId       int64  `json:"tmdbid"`
+	ReleaseGroup string `json:"release_group"` // 发布组
+	ResourceType string `json:"resource_type"` // 资源类型
 }
 
 func ExtractTmdbId(name string) int64 {
@@ -189,6 +191,11 @@ func ExtractMediaInfoRe(name string, isMovie bool, seEp bool, videoExt []string,
 	// 用分隔符连接newNames
 	name = strings.Join(newNames, maxDelimiter)
 	// fmt.Printf("连接后文件名: %s\n", name)
+
+	// 提取发布组和资源类型（在清理之前）
+	info.ReleaseGroup = ExtractReleaseGroup(name)
+	info.ResourceType = ExtractResourceType(name)
+
 	// 移除结尾的发布组
 	name = removeTitleGroup(name)
 	name = cleanFilename(name)
@@ -404,6 +411,77 @@ func cleanFilename(name string) string {
 	// }
 	// fmt.Printf("去掉下划线后的文件名: %s\n", name)
 	return strings.TrimSpace(name)
+}
+
+// ExtractReleaseGroup 提取发布组名称
+func ExtractReleaseGroup(filename string) string {
+	// 常见的发布组模式
+	releaseGroupPatterns := []string{
+		`MTeam$`, `TPTV$`, `SupaHacka$`, `c0kE$`, `HONE$`, `HDZ$`, `CHD$`,
+		`CSWEB$`, `BLoz$`, `ADE$`, `TMT$`, `HDS$`, `HDH$`, `INCUBO$`,
+		`GMA$`, `NoGrp$`, `MainFrame$`, `MNHD-FRDS$`, `SharpHD$`, `UBits$`,
+		`ZmWeb$`, `MKu$`, `CMCTV$`, `ADWeb$`, `UBWEB$`, `Panda$`, `iFPD$`,
+		`LWRTD$`, `ZTR$`, `CHDWEB$`, `PtBM$`, `WiKi$`, `BONE$`, `HHWEB$`,
+		`MWeb$`, "SPWEB$", "DREAMHD$",
+		`PTer$`, `MWeb$`, `NoGroup$`, `CMCT$`, `HDSky$`, `Hero$`, `HDSky$`,
+		`CHDBits$`, `HDHome$`, `HDSpace$`, `QuickIO$`, `NUKEHD$`, `WEBLE$`,
+		`112114119$`,
+		`CtrlHD$`, `FraMeSToR$`, `ExKinoRay$`, `HDSKY$`,
+	}
+
+	// 提取发布组
+	for _, pattern := range releaseGroupPatterns {
+		re := regexp.MustCompile(`(?i)(\-[\p{han}\a-z|0-9]+)?(\-|@)?` + pattern)
+		matches := re.FindStringSubmatch(filename)
+		if len(matches) > 0 {
+			// 提取发布组名称（去除前缀和后缀）
+			releaseGroup := strings.TrimSuffix(matches[0], "-")
+			releaseGroup = strings.TrimPrefix(releaseGroup, "-")
+			releaseGroup = strings.TrimSuffix(releaseGroup, "@")
+			releaseGroup = strings.TrimSpace(releaseGroup)
+			if releaseGroup != "" {
+				return releaseGroup
+			}
+		}
+	}
+
+	// 尝试匹配通用的发布组模式（文件名末尾的横杠+字母数字组合）
+	re := regexp.MustCompile(`-(\w{2,})$`)
+	matches := re.FindStringSubmatch(filename)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+
+	return ""
+}
+
+// ExtractResourceType 提取资源类型
+func ExtractResourceType(filename string) string {
+	// 资源类型识别规则（按优先级排序）
+	resourceTypePatterns := []struct {
+		pattern string
+		typeStr string
+	}{
+		{`(?i)BluRay\.?Remux`, "BluRay Remux"},
+		{`(?i)Remux`, "Remux"},
+		{`(?i)(Blu.?Ray|Blue.?Ray|BDRip)`, "BluRay"},
+		{`(?i)(WEB.?DL|WEBDL|Netflix|Amazon|Disney\+|Hulu)`, "WEB-DL"},
+		{`(?i)(WEBRip|WEB-Rip)`, "WEBRip"},
+		{`(?i)HDTV`, "HDTV"},
+		{`(?i)(TVRip|TV-Rip)`, "TVRip"},
+		{`(?i)(DVD5|DVD9|DVDRip|DVD-Rip)`, "DVD"},
+		{`(?i)UHD`, "UHD"},
+		{`(?i)4K`, "4K"},
+	}
+
+	for _, rp := range resourceTypePatterns {
+		re := regexp.MustCompile(rp.pattern)
+		if re.MatchString(filename) {
+			return rp.typeStr
+		}
+	}
+
+	return ""
 }
 
 func removeTitleGroup(filename string) string {

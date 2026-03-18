@@ -80,6 +80,9 @@ func (i *IdMovieImpl) extractInfo(mediaFile *models.ScrapeMediaFile) (*helpers.M
 		}
 	} else if info.TmdbId != 0 {
 		helpers.AppLogger.Infof("使用正则提取电影信息成功, 文件名 %s, 文件夹：%s 提取结果 %+v", mediaFile.VideoFilename, filepath.Base(mediaFile.Path), info)
+		// 保存发布组和资源类型到 mediaFile
+		mediaFile.ReleaseGroup = info.ReleaseGroup
+		mediaFile.ResourceType = info.ResourceType
 		return &helpers.MediaInfo{
 			Name:   info.Name,
 			Year:   info.Year,

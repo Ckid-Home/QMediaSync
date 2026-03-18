@@ -180,6 +180,8 @@ type ScrapeMediaFile struct {
 	VideoCodecJson       string            `json:"-"`                                               // 视频编码json字符串
 	AudioCodecJson       string            `json:"-"`                                               // 音频编码json字符串
 	SubtitleCodecJson    string            `json:"-"`                                               // 内封字幕流json字符串
+	ReleaseGroup         string            `json:"release_group"`                                   // 发布组
+	ResourceType         string            `json:"resource_type"`                                   // 资源类型
 	Status               ScrapeMediaStatus `json:"status"`                                          // 媒体状态
 	FailedReason         string            `json:"failed_reason"`                                   // 刮削失败原因
 	ScanTime             int64             `json:"scan_time"`                                       // 识别时间
@@ -633,6 +635,48 @@ func (sm *ScrapeMediaFile) GenerateNameByTemplate(template string) string {
 		newName = strings.ReplaceAll(newName, "{num}", sm.Media.Num)
 	} else {
 		newName = strings.ReplaceAll(newName, "{num}", "")
+	}
+	// en_title - 英文标题
+	if sm.Media != nil && sm.Media.OriginalName != "" {
+		newName = strings.ReplaceAll(newName, "{en_title}", sm.Media.OriginalName)
+	} else {
+		newName = strings.ReplaceAll(newName, "{en_title}", "")
+	}
+	// videoCodec - 视频编码
+	if sm.VideoCodec != nil && sm.VideoCodec.Micodec != "" {
+		newName = strings.ReplaceAll(newName, "{videoCodec}", sm.VideoCodec.Micodec)
+	} else if sm.VideoCodec != nil && sm.VideoCodec.Codec != "" {
+		newName = strings.ReplaceAll(newName, "{videoCodec}", sm.VideoCodec.Codec)
+	} else {
+		newName = strings.ReplaceAll(newName, "{videoCodec}", "")
+	}
+	// audioCodec - 音频编码
+	if len(sm.AudioCodec) > 0 && sm.AudioCodec[0].Micodec != "" {
+		newName = strings.ReplaceAll(newName, "{audioCodec}", sm.AudioCodec[0].Micodec)
+	} else if len(sm.AudioCodec) > 0 && sm.AudioCodec[0].Codec != "" {
+		newName = strings.ReplaceAll(newName, "{audioCodec}", sm.AudioCodec[0].Codec)
+	} else {
+		newName = strings.ReplaceAll(newName, "{audioCodec}", "")
+	}
+	// releaseGroup - 发布组
+	if sm.ReleaseGroup != "" {
+		newName = strings.ReplaceAll(newName, "{releaseGroup}", sm.ReleaseGroup)
+	} else {
+		newName = strings.ReplaceAll(newName, "{releaseGroup}", "")
+	}
+	// resourceType - 资源类型
+	if sm.ResourceType != "" {
+		newName = strings.ReplaceAll(newName, "{resourceType}", sm.ResourceType)
+	} else {
+		newName = strings.ReplaceAll(newName, "{resourceType}", "")
+	}
+	// original_name - 原始文件名
+	if sm.VideoFilename != "" {
+		// 移除文件扩展名
+		originalName := strings.TrimSuffix(sm.VideoFilename, sm.VideoExt)
+		newName = strings.ReplaceAll(newName, "{original_name}", originalName)
+	} else {
+		newName = strings.ReplaceAll(newName, "{original_name}", "")
 	}
 	if sm.MediaType == MediaTypeTvShow {
 		if sm.SeasonNumber >= 0 {

@@ -17,7 +17,7 @@ type Migrator struct {
 	VersionCode int `json:"version_code"` // 版本号
 }
 
-var MaxVersionCode = 33
+var MaxVersionCode = 34
 var AllTables = []any{
 	BackupConfig{}, BackupRecord{},
 	ApiKey{}, Settings{}, Sync{}, User{}, Account{},
@@ -379,6 +379,11 @@ func Migrate() {
 	if migrator.VersionCode == 32 {
 		// 添加刮削目录自定义定时任务字段
 		db.Db.AutoMigrate(ScrapePath{})
+		migrator.UpdateVersionCode(db.Db)
+	}
+	if migrator.VersionCode == 33 {
+		// 添加发布组和资源类型字段
+		db.Db.AutoMigrate(ScrapeMediaFile{})
 		migrator.UpdateVersionCode(db.Db)
 	}
 	helpers.AppLogger.Infof("当前数据库版本 %d", migrator.VersionCode)

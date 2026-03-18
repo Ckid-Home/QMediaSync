@@ -155,7 +155,8 @@ func New(rawJson string) (i *Item, err error) {
 }
 
 // Read 从流中读取 JSON 数据并转换为对象
-func Read(reader io.Reader) (*Item, error) {
+// expectedContentLength: 预期的响应体长度（Content-Length），用于验证数据完整性。传入 -1 表示不验证
+func Read(reader io.Reader, expectedContentLength int64) (*Item, error) {
 	if reader == nil {
 		return nil, errors.New("reader 为空")
 	}
@@ -164,6 +165,12 @@ func Read(reader io.Reader) (*Item, error) {
 	if err != nil {
 		return nil, fmt.Errorf("读取 reader 数据失败: %v", err)
 	}
+
+	// 验证数据长度完整性
+	if expectedContentLength > 0 && int64(len(bytes)) != expectedContentLength {
+		return nil, fmt.Errorf("数据长度不完整: 预期 %d 字节, 实际 %d 字节", expectedContentLength, len(bytes))
+	}
+
 	return New(string(bytes))
 }
 
