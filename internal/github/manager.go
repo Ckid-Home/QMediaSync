@@ -107,7 +107,7 @@ func (m *Manager) TestConnection(connType ConnectionType, proxyURL string) bool 
 		client.Transport = transport
 	}
 
-	resp, err := client.Get("https://github.com")
+	resp, err := client.Get("https://api.github.com/repos/qicfan/qmediasync/releases")
 	if err != nil {
 		return false
 	}
@@ -137,19 +137,7 @@ func (m *Manager) GetBestConnection() (*GitHubAccess, error) {
 		return m.current, nil
 	}
 
-	// 1. 测试直连
-	if m.TestConnection(ConnectionTypeDirect, "") {
-		m.current = &GitHubAccess{
-			Type:       ConnectionTypeDirect,
-			Client:     &http.Client{Timeout: 30 * time.Second}, // 使用较长超时
-			LastTested: time.Now(),
-			Cached:     false,
-		}
-		log.Printf("GitHub连接方式: 直连")
-		return m.current, nil
-	}
-
-	// 2. 测试用户代理
+	// 1. 测试用户代理(优先使用用户代理，因为直连可能无法下载安装包)
 	if m.httpProxy != "" {
 		if m.TestConnection(ConnectionTypeProxy, m.httpProxy) {
 			proxy, err := url.Parse(m.httpProxy)
@@ -171,6 +159,18 @@ func (m *Manager) GetBestConnection() (*GitHubAccess, error) {
 		// 如果用户配置了代理但代理不可用，直接返回错误
 		// 参考原始TestGithub逻辑：如果proxy != ""，返回failed
 		return nil, fmt.Errorf("用户配置的代理不可用: %s", m.httpProxy)
+	}
+
+	// 2. 测试直连
+	if m.TestConnection(ConnectionTypeDirect, "") {
+		m.current = &GitHubAccess{
+			Type:       ConnectionTypeDirect,
+			Client:     &http.Client{Timeout: 30 * time.Second}, // 使用较长超时
+			LastTested: time.Now(),
+			Cached:     false,
+		}
+		log.Printf("GitHub连接方式: 直连")
+		return m.current, nil
 	}
 
 	// 3. 测试GitHub代理URL（仅在用户未配置代理时）
