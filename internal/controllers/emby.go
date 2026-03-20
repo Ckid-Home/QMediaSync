@@ -740,6 +740,10 @@ func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) stri
 	fmt.Fprintf(&buf, "用户：%s\n", webhook.GetUserName())
 	fmt.Fprintf(&buf, "设备：%s (%s)\n", webhook.GetDeviceName(), webhook.GetClientName())
 	// buf.WriteString(webhook.Item.Name)
+	if webhook.Item.Type == "Episode" {
+		fmt.Fprintf(&buf, "电视剧：%s\n", webhook.Item.SeriesName)
+		fmt.Fprintf(&buf, "季集：S%dE%d\n", webhook.Item.SeasonNumber, webhook.Item.EpisodeNumber)
+	}
 
 	return buf.String()
 }

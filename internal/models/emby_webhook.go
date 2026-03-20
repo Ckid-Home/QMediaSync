@@ -7,10 +7,10 @@ import (
 
 // EmbyPlaybackWebhook Emby 播放事件 Webhook 消息结构
 type EmbyPlaybackWebhook struct {
-	Event   string                 `json:"Event"`              // playback.start/playback.pause/playback.stop
-	User    EmbyPlaybackUser       `json:"User"`
-	Item    EmbyPlaybackItem       `json:"Item"`
-	Session EmbyPlaybackSession    `json:"Session"`
+	Event   string              `json:"Event"` // playback.start/playback.pause/playback.stop
+	User    EmbyPlaybackUser    `json:"User"`
+	Item    EmbyPlaybackItem    `json:"Item"`
+	Session EmbyPlaybackSession `json:"Session"`
 }
 
 // EmbyPlaybackUser 播放用户信息
@@ -21,16 +21,16 @@ type EmbyPlaybackUser struct {
 
 // EmbyPlaybackSession 播放会话信息
 type EmbyPlaybackSession struct {
-	DeviceName   string             `json:"DeviceName"`
-	Client       string             `json:"Client"`
-	PlaybackInfo EmbyPlaybackInfo   `json:"PlaybackInfo"`
+	DeviceName   string           `json:"DeviceName"`
+	Client       string           `json:"Client"`
+	PlaybackInfo EmbyPlaybackInfo `json:"PlaybackInfo"`
 }
 
 // EmbyPlaybackInfo 播放信息
 type EmbyPlaybackInfo struct {
-	PositionTicks int64            `json:"PositionTicks"`   // 当前播放位置（单位：1/10000微秒）
-	PlaySessionId string           `json:"PlaySessionId"`  // 播放会话ID
-	MediaSource   EmbyMediaSource  `json:"MediaSource"`
+	PositionTicks int64           `json:"PositionTicks"` // 当前播放位置（单位：1/10000微秒）
+	PlaySessionId string          `json:"PlaySessionId"` // 播放会话ID
+	MediaSource   EmbyMediaSource `json:"MediaSource"`
 }
 
 // EmbyMediaSource 媒体源信息
@@ -40,16 +40,16 @@ type EmbyMediaSource struct {
 
 // EmbyPlaybackItem Emby 播放媒体项信息
 type EmbyPlaybackItem struct {
-	Name           string             `json:"Name"`
-	Type           string             `json:"Type"` // Movie/Episode
-	OriginalTitle  string             `json:"OriginalTitle,omitempty"`
-	ProductionYear int                `json:"ProductionYear,omitempty"`
-	PremiereDate   string             `json:"PremiereDate,omitempty"`
-	SeriesName     string             `json:"SeriesName,omitempty"`     // 剧集名称
-	SeasonNumber   int                `json:"SeasonNumber,omitempty"`   // 季号（剧集）
-	EpisodeNumber  int                `json:"EpisodeNumber,omitempty"`  // 集号（剧集）
-	ImageTags      map[string]string  `json:"ImageTags,omitempty"`      // 图片标签
-	ID             string             `json:"Id"`                      // 媒体ID
+	Name           string            `json:"Name"`
+	Type           string            `json:"Type"` // Movie/Episode
+	OriginalTitle  string            `json:"OriginalTitle,omitempty"`
+	ProductionYear int               `json:"ProductionYear,omitempty"`
+	PremiereDate   string            `json:"PremiereDate,omitempty"`
+	SeriesName     string            `json:"SeriesName,omitempty"`        // 剧集名称
+	SeasonNumber   int               `json:"ParentIndexNumber,omitempty"` // 季号（剧集）
+	EpisodeNumber  int               `json:"IndexNumber,omitempty"`       // 集号（剧集）
+	ImageTags      map[string]string `json:"ImageTags,omitempty"`         // 图片标签
+	ID             string            `json:"Id"`                          // 媒体ID
 }
 
 // GetUserID 获取用户ID
