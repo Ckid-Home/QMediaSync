@@ -189,37 +189,6 @@ func (w *EmbyPlaybackWebhook) GetMediaTypeName() string {
 	}
 }
 
-// GetPlaybackDuration 获取播放时长（毫秒，仅Stop事件有意义）
-// 对于Stop事件，返回已播放的时长；对于其他事件，返回0
-func (w *EmbyPlaybackWebhook) GetPlaybackDuration() int64 {
-	if w.Event != "playback.stop" {
-		return 0
-	}
-	// PositionTicks单位是1/10000微秒，转换为毫秒
-	// 1 tick = 0.1毫秒
-	return w.Session.PlaybackInfo.PositionTicks / 10
-}
-
-// GetUserID 获取用户ID
-func (w *EmbyPlaybackWebhook) GetUserID() string {
-	return w.User.ID
-}
-
-// GetUserName 获取用户名
-func (w *EmbyPlaybackWebhook) GetUserName() string {
-	return w.User.Name
-}
-
-// GetDeviceName 获取设备名称
-func (w *EmbyPlaybackWebhook) GetDeviceName() string {
-	return w.Session.DeviceName
-}
-
-// GetClientName 获取客户端名称
-func (w *EmbyPlaybackWebhook) GetClientName() string {
-	return w.Session.Client
-}
-
 // GetDeviceID 获取设备ID
 func (w *EmbyPlaybackWebhook) GetDeviceID() string {
 	return w.Session.DeviceID
