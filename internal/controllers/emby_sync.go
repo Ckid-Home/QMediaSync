@@ -65,3 +65,23 @@ func GetEmbySyncStatus(c *gin.Context) {
 		Data:    gin.H{"last_sync_time": config.LastSyncTime, "sync_cron": config.SyncCron, "total_items": total, "sync_enabled": config.SyncEnabled, "is_running": emby.IsEmbySyncRunning()},
 	})
 }
+
+// GetEmbyLibraries 获取所有可用的Emby媒体库
+// @Summary 获取Emby媒体库列表
+// @Description 获取所有可用的Emby媒体库列表
+// @Tags Emby管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} object
+// @Failure 200 {object} object
+// @Router /emby/libraries [get]
+// @Security JwtAuth
+// @Security ApiKeyAuth
+func GetEmbyLibraries(c *gin.Context) {
+	libraries, err := models.GetAllEmbyLibraries()
+	if err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取媒体库列表失败: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "获取媒体库列表成功", Data: libraries})
+}

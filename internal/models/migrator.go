@@ -424,6 +424,10 @@ func Migrate() {
 		migrator.UpdateVersionCode(db.Db)
 	}
 	if migrator.VersionCode == 35 {
+
+		// 添加Emby媒体库选择字段到EmbyConfig表
+		db.Db.AutoMigrate(EmbyConfig{})
+
 		// 清理重复的 ScrapeSettings 记录
 		var count int64
 		db.Db.Model(&ScrapeSettings{}).Count(&count)
@@ -443,6 +447,7 @@ func Migrate() {
 			helpers.AppLogger.Warnf("数据库中没有刮削设置记录，将创建默认记录")
 			InitScrapeSetting()
 		}
+
 		migrator.UpdateVersionCode(db.Db)
 	}
 	helpers.AppLogger.Infof("当前数据库版本 %d", migrator.VersionCode)

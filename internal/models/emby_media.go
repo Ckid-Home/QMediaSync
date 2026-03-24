@@ -763,3 +763,94 @@ func GetLastItemDateCreatedTimeByLibraryID(libraryID string) int64 {
 	helpers.AppLogger.Infof("查询媒体库 %s 最后一个项目成功：%d => %d", libraryID, lastItem.ItemIdInt, lastItem.DateCreatedTime)
 	return lastItem.DateCreatedTime
 }
+
+// GetAllEmbyLibraries 获取所有Emby媒体库
+func GetAllEmbyLibraries() ([]EmbyLibrary, error) {
+	var libraries []EmbyLibrary
+	err := db.Db.Find(&libraries).Error
+	return libraries, err
+}
+
+// CleanupAllEmbyLibraryData 清理所有Emby媒体库数据
+func CleanupAllEmbyLibraryData() error {
+	tx := db.Db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 清理 emby_library_sync_paths
+	if err := tx.Exec("DELETE FROM emby_library_sync_paths").Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 清理 emby_media_sync_files
+	if err := tx.Exec("DELETE FROM emby_media_sync_files WHERE emby_item_id IN (SELECT id FROM emby_media_items)").Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 清理 emby_media_items
+	if err := tx.Exec("DELETE FROM emby_media_items").Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 清理 emby_libraries
+	if err := tx.Exec("DELETE FROM emby_libraries").Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// CleanupUnselectedEmbyLibraryData 清理未选中的媒体库数据
+func CleanupUnselectedEmbyLibraryData(selectedLibIds []string) error {
+	tx := db.Db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 获取未选中的媒体库ID列表
+	var unselectedLibIds []string
+	if err := tx.Model(&EmbyLibrary{}).Where("library_id NOT IN ?", selectedLibIds).Pluck("library_id", &unselectedLibIds).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if len(unselectedLibIds) == 0 {
+		tx.Rollback()
+		return nil
+	}
+
+	// 清理 emby_library_sync_paths
+	if err := tx.Where("library_id IN ?", unselectedLibIds).Delete(&EmbyLibrarySyncPath{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 清理 emby_media_sync_files
+	if err := tx.Exec("DELETE FROM emby_media_sync_files WHERE emby_item_id IN (SELECT id FROM emby_media_items WHERE library_id IN ?)", unselectedLibIds).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 清理 emby_media_items
+	if err := tx.Where("library_id IN ?", unselectedLibIds).Delete(&EmbyMediaItem{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 清理 emby_libraries
+	if err := tx.Where("library_id IN ?", unselectedLibIds).Delete(&EmbyLibrary{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}

@@ -4,6 +4,7 @@ import (
 	embyclientrestgo "Q115-STRM/internal/embyclient-rest-go"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
+	"encoding/json"
 	"errors"
 	"net/url"
 	"strings"
@@ -70,6 +71,39 @@ func PerformEmbySync() (int, error) {
 	}
 	if err := models.UpsertEmbyLibraries(libs); err != nil {
 		helpers.AppLogger.Warnf("保存媒体库信息失败: %v", err)
+	}
+
+	// 根据配置过滤媒体库
+	if config.SyncAllLibraries == 0 {
+		var selectedLibIds []string
+		if err := json.Unmarshal([]byte(config.SelectedLibraries), &selectedLibIds); err == nil {
+			// 创建 ID 到库的映射
+			libMap := make(map[string]embyclientrestgo.EmbyLibrary)
+			for _, lib := range libs {
+				libMap[lib.ID] = lib
+			}
+
+			// 只保留选中的媒体库
+			filteredLibs := make([]embyclientrestgo.EmbyLibrary, 0, len(selectedLibIds))
+			for _, id := range selectedLibIds {
+				if lib, ok := libMap[id]; ok {
+					filteredLibs = append(filteredLibs, lib)
+				}
+			}
+			libs = filteredLibs
+
+			// 清理未选中的媒体库数据
+			if err := models.CleanupUnselectedEmbyLibraryData(selectedLibIds); err != nil {
+				helpers.AppLogger.Warnf("清理未选中媒体库数据失败: %v", err)
+			}
+		} else {
+			helpers.AppLogger.Warnf("解析选中的媒体库列表失败: %v", err)
+		}
+	}
+
+	if len(libs) == 0 {
+		helpers.AppLogger.Info("没有选中任何媒体库，跳过同步")
+		return 0, nil
 	}
 
 	// 准备并发池
