@@ -349,7 +349,7 @@ func (s *SyncStrm) processNetFile(file *SyncFileCache) error {
 	// 1. 检查对应的本地文件是否存在
 	// s.Sync.Logger.Infof("正在处理网盘文件 %s => %s", file.FileId, file.FileName)
 	localFilePath := file.GetLocalFilePath(s.TargetPath, s.SourcePath)
-	s.Sync.Logger.Infof("本地文件路径: %s", localFilePath)
+	s.Sync.Logger.Infof("115 本地文件和网盘对照路径: %s => %s : %s %s", localFilePath, file.GetFileId(), file.GetFullRemotePath(), file.GetPickCode(""))
 	// 先处理重命名，只有非临时同步才会处理重命名，临时同步只会删除重建
 	var existingFile models.SyncFile
 	if !s.TmpSyncPath {

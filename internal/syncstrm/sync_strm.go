@@ -123,6 +123,11 @@ func (s *SyncStrm) CompareStrm(st *SyncFileCache) int {
 		if strmData.PickCode == "" {
 			s.Sync.Logger.Warnf("文件 %s 的STRM内容缺少PickCode: %s, 补全", filepath.Join(st.Path, st.FileName), strmData.PickCode)
 			return 0
+		} else {
+			if strmData.PickCode != st.PickCode {
+				s.Sync.Logger.Warnf("文件 %s 的STRM内容的PickCode与本地不一致, 本地: %s, 远程: %s", filepath.Join(st.Path, st.FileName), st.PickCode, strmData.PickCode)
+				return 0
+			}
 		}
 		if strmData.UserId != s.Account.UserId {
 			s.Sync.Logger.Warnf("文件 %s 的STRM内容的用户ID与本地不一致, 本地: %s, 远程: %s", filepath.Join(st.Path, st.FileName), s.Account.UserId, strmData.UserId)
