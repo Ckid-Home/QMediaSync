@@ -7,6 +7,7 @@ import (
 	"Q115-STRM/internal/syncstrm"
 	"Q115-STRM/internal/tmdb"
 	"Q115-STRM/internal/v115open"
+	ws "Q115-STRM/internal/websocket"
 	"context"
 	"fmt"
 	"os"
@@ -46,6 +47,13 @@ mainloop:
 			} else {
 				helpers.AppLogger.Infof("集刮削整理任务队列 %d 处理电视剧 %s 季 %d 集 %d 成功", taskIndex, mediaFile.Name, mediaFile.SeasonNumber, mediaFile.EpisodeNumber)
 			}
+			// 触发单个刮削项完成事件
+			ws.BroadcastEvent(ws.EventScraperItemComplete, map[string]any{
+				"item_id": mediaFile.ID,
+				"name":    mediaFile.VideoFilename,
+				"status":  string(mediaFile.Status),
+				"success": err == nil,
+			})
 			wg.Done() // 处理完成后，计数-1
 		}
 	}

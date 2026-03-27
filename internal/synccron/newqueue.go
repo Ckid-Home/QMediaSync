@@ -5,6 +5,7 @@ import (
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/scrape"
 	"Q115-STRM/internal/syncstrm"
+	ws "Q115-STRM/internal/websocket"
 	"context"
 	"fmt"
 	"runtime"
@@ -256,13 +257,30 @@ func (q *NewSyncQueuePerType) executeStrmSync(task *NewSyncTask) {
 			return
 		}
 	}
+
+	// 触发STRM同步任务开始事件
+	ws.BroadcastEvent(ws.EventStrmSyncTaskStart, map[string]any{
+		"task_id": task.ID,
+	})
+
 	defer func() {
 		q.strmSync = nil
 	}()
 	if startErr := q.strmSync.Start(); startErr == nil {
 		logInfo("STRM同步任务执行成功: ID=%d", task.ID)
+		// 触发STRM同步任务完成事件
+		ws.BroadcastEvent(ws.EventStrmSyncTaskComplete, map[string]any{
+			"task_id": task.ID,
+			"success": true,
+		})
 	} else {
 		logError("STRM同步任务执行失败: ID=%d, 错误=%v", task.ID, startErr)
+		// 触发STRM同步任务完成事件（失败）
+		ws.BroadcastEvent(ws.EventStrmSyncTaskComplete, map[string]any{
+			"task_id": task.ID,
+			"success": false,
+			"error":   startErr.Error(),
+		})
 	}
 }
 
@@ -279,6 +297,13 @@ func (q *NewSyncQueuePerType) executeScrape(task *NewSyncTask) {
 	}
 
 	logInfo("开始执行刮削任务: ID=%d", task.ID)
+
+	// 触发刮削任务开始事件
+	ws.BroadcastEvent(ws.EventScraperTaskStart, map[string]any{
+		"task_id":   task.ID,
+		"path_name": scrapePath.SourcePath,
+	})
+
 	q.scrapeInstance = scrape.NewScrape(scrapePath)
 	if q.scrapeInstance == nil {
 		logError("创建刮削任务失败")
@@ -290,8 +315,20 @@ func (q *NewSyncQueuePerType) executeScrape(task *NewSyncTask) {
 
 	if success := q.scrapeInstance.Start(); success {
 		logInfo("刮削任务执行成功: ID=%d", task.ID)
+		// 触发刮削任务完成事件
+		ws.BroadcastEvent(ws.EventScraperTaskComplete, map[string]any{
+			"task_id":   task.ID,
+			"path_name": scrapePath.SourcePath,
+			"success":   true,
+		})
 	} else {
 		logError("刮削任务执行失败: ID=%d", task.ID)
+		// 触发刮削任务完成事件（失败）
+		ws.BroadcastEvent(ws.EventScraperTaskComplete, map[string]any{
+			"task_id":   task.ID,
+			"path_name": scrapePath.SourcePath,
+			"success":   false,
+		})
 	}
 }
 

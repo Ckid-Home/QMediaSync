@@ -14,6 +14,7 @@ import (
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/synccron"
 	"Q115-STRM/internal/v115open"
+	"Q115-STRM/internal/websocket"
 	"context"
 	"database/sql"
 	"embed"
@@ -460,6 +461,10 @@ func initOthers() {
 
 	// 启动同步任务队列管理器
 	synccron.InitNewSyncQueueManager()
+	// 初始化WebSocket事件中心
+	wsHub := websocket.NewEventHub()
+	websocket.GlobalEventHub = wsHub
+	go wsHub.Run()
 	synccron.InitCron()       // 初始化定时任务（包含备份定时任务）
 	synccron.InitSyncCron()   // 初始化同步目录的定时任务
 	synccron.InitScrapeCron() // 初始化刮削目录的自定义定时任务
@@ -533,6 +538,7 @@ func setRouter(r *gin.Engine) {
 	r.GET("/api/scrape/tmp-image", controllers.ScrapeTmpImage)           // 获取临时图片
 	r.GET("/api/scrape/records/export", controllers.ExportScrapeRecords) // 导出刮削记录
 	r.GET("/api/logs/ws", controllers.LogWebSocket)                      // WebSocket日志查看
+	r.GET("/api/events/ws", controllers.EventWebSocket)                  // WebSocket事件推送
 	r.GET("/api/logs/old", controllers.GetOldLogs)                       // HTTP获取旧日志
 	r.GET("/api/logs/download", controllers.DownloadLogFile)             // 下载日志文件
 

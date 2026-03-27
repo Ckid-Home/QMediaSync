@@ -10,6 +10,7 @@ import (
 	"Q115-STRM/internal/syncstrm"
 	"Q115-STRM/internal/tmdb"
 	"Q115-STRM/internal/v115open"
+	ws "Q115-STRM/internal/websocket"
 	"context"
 	"errors"
 	"fmt"
@@ -100,6 +101,13 @@ mainloop:
 			if err != nil {
 				helpers.AppLogger.Errorf("任务队列 %d 刮削文件 %s 失败: %v", taskIndex, mediaFile.VideoFilename, err)
 			}
+			// 触发单个刮削项完成事件
+			ws.BroadcastEvent(ws.EventScraperItemComplete, map[string]any{
+				"item_id": mediaFile.ID,
+				"name":    mediaFile.VideoFilename,
+				"status":  string(mediaFile.Status),
+				"success": err == nil,
+			})
 			continue mainloop
 		case <-time.After(5 * time.Minute):
 			return // 5分钟没响应自动退出
