@@ -31,7 +31,7 @@ func (d *open115Driver) SetSyncStrm(s *SyncStrm) {
 
 // 返回SyncFile的内存数据结构
 func (d *open115Driver) GetNetFileFiles(ctx context.Context, parentPath, parentPathId string) ([]*SyncFileCache, error) {
-	const limit = 1000
+	limit := models.GetFileListPageSize()
 	offset := 0
 	var fileItems []*SyncFileCache
 mainloop:
