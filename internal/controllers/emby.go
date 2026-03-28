@@ -178,7 +178,7 @@ func Webhook(ctx *gin.Context) {
 				refreshLibraryLockMu.Unlock()
 			}()
 			time.Sleep(1 * time.Minute)
-			emby.PerformEmbySync()
+			emby.IncrementalSyncEmbyMediaItems(event.Item.ID)
 		}()
 	}
 	if event.Event == "library.deleted" {

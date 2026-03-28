@@ -251,6 +251,10 @@ func IncrementalSyncEmbyMediaItems(itemId string) error {
 	}
 	for _, lib := range librarys {
 		lastDateCreatedTime := models.GetLastItemDateCreatedTimeByLibraryID(lib.ID)
+		if lastDateCreatedTime == 0 {
+			helpers.AppLogger.Warnf("获取媒体库%s最后一此同步时间失败，可能是因为没有同步过任何媒体项", lib.ID)
+			continue
+		}
 		items, gerr := client.GetMediaItemsByLibraryID(lib.ID, lastDateCreatedTime)
 		if gerr != nil {
 			helpers.AppLogger.Warnf("获取媒体库%s失败: %v", lib.ID, gerr)
