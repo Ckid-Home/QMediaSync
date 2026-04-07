@@ -351,7 +351,7 @@ func (m *movieScrapeImpl) SyncFilesToSTRMPath(mediaFile *models.ScrapeMediaFile,
 		ctx := context.Background()
 		notif := &models.Notification{
 			Type:      models.SyncFinished,
-			Title:     fmt.Sprintf("✅ STRM生成完成: %s", mediaFile.Name),
+			Title:     fmt.Sprintf("✅ 刮削同步生成STRM完成: %s", mediaFile.Name),
 			Content:   fmt.Sprintf("📊 类型: 电影, 路径: %s\n⏰ 时间: %s", syncPath.RemotePath, time.Now().Format("2006-01-02 15:04:05")),
 			Image:     mediaFile.Media.PosterPath,
 			Timestamp: time.Now(),
