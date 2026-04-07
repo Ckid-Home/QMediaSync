@@ -116,7 +116,7 @@ func Redirect2OpenlistLink(c *gin.Context) {
 	if urls.IsRemote(strmUrl) || strings.HasPrefix(strmUrl, "http") || strings.HasPrefix(strmUrl, "nfs:") {
 		finalPath := getFinalRedirectLink(strmUrl, c.Request.Header.Clone())
 		if !strings.Contains(finalPath, "/proxy-115") {
-			logs.Success("重定向 strm: %s", finalPath)
+			logs.Success("重定向 strm 到直连地址: %s", finalPath)
 			c.Header(cache.HeaderKeyExpired, cache.Duration(time.Minute*10))
 			c.Redirect(http.StatusTemporaryRedirect, finalPath)
 			return
@@ -255,10 +255,10 @@ func getFinalRedirectLink(originLink string, header http.Header) string {
 	}
 	finalLink, resp, err := https.Get(originLink).Header(header).DoRedirect()
 	if err != nil {
-		logs.Warn("内部重定向失败: %v", err)
+		logs.Warn("获取最终重定向链接失败, 原始链接: %s, 错误信息: %v", originLink, err)
 		return originLink
 	}
-	logs.Success("内部重定向查询到最终链接: %s => %s", originLink, finalLink)
+	logs.Success("获取最终重定向链接成功, 原始链接: %s, 最终链接: %s", originLink, finalLink)
 	defer resp.Body.Close()
 	return finalLink
 }

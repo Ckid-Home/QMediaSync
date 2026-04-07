@@ -331,7 +331,7 @@ func (m *movieScrapeImpl) SyncFilesToSTRMPath(mediaFile *models.ScrapeMediaFile,
 	// 先生成STRM文件
 	// 1. 构造STRM文件路径
 	syncStrm := syncstrm.NewSyncStrmFromSyncPath(syncPath)
-	syncStrm.ProcessStrmFile(&syncstrm.SyncFileCache{
+	strmErr := syncStrm.ProcessStrmFile(&syncstrm.SyncFileCache{
 		Path:          mediaFile.Media.Path,
 		ParentId:      mediaFile.Media.PathId,
 		FileType:      v115open.TypeFile,
@@ -346,6 +346,21 @@ func (m *movieScrapeImpl) SyncFilesToSTRMPath(mediaFile *models.ScrapeMediaFile,
 		LocalFilePath: filepath.Join(syncPath.LocalPath, mediaFile.Media.Path, mediaFile.NewVideoBaseName+".strm"),
 	})
 	models.DeleteSyncRecordById(syncStrm.Sync.ID)
+	// 发送STRM生成完成通知（复用现有SyncFinished通知开关）
+	if strmErr == nil && mediaFile.Media != nil && notificationmanager.GlobalEnhancedNotificationManager != nil {
+		ctx := context.Background()
+		notif := &models.Notification{
+			Type:      models.SyncFinished,
+			Title:     fmt.Sprintf("✅ 刮削同步生成STRM完成: %s", mediaFile.Name),
+			Content:   fmt.Sprintf("📊 类型: 电影, 路径: %s\n⏰ 时间: %s", syncPath.RemotePath, time.Now().Format("2006-01-02 15:04:05")),
+			Image:     mediaFile.Media.PosterPath,
+			Timestamp: time.Now(),
+			Priority:  models.NormalPriority,
+		}
+		if err := notificationmanager.GlobalEnhancedNotificationManager.SendNotification(ctx, notif); err != nil {
+			helpers.AppLogger.Errorf("发送STRM生成完成通知失败: %v", err)
+		}
+	}
 	if files == nil {
 		return
 	}
@@ -527,9 +542,10 @@ func (m *movieScrapeImpl) FinishMovie(mediaFile *models.ScrapeMediaFile) {
 			}
 		}
 	}
-	if mediaFile.ScrapeType == models.ScrapeTypeOnly || mediaFile.RenameType != models.RenameTypeMove {
+	if mediaFile.ScrapeType == models.ScrapeTypeOnly || mediaFile.RenameType != models.RenameTypeMove || mediaFile.IsReScrape {
 		// 如果仅刮削，跳过
 		// 如果不是移动模式，跳过
+		// 如果是重新刮削（回退后），跳过删除源路径
 		// 如果不强制删除来源目录，跳过
 		// 如果视频在来源根目录，跳过
 		helpers.AppLogger.Infof("视频 %s 存在不符合删除来源目录的条件，跳过删除来源目录: %s", mediaFile.Name, mediaFile.Path)
