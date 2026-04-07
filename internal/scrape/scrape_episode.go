@@ -230,9 +230,10 @@ func (t *tvShowScrapeImpl) FinishEpisode(mediaFile *models.ScrapeMediaFile) {
 	// if mediaFile.SourceType == models.SourceTypeLocal {
 	// 	t.RemoveEpisodeTmpFiles(mediaFile)
 	// }
-	if mediaFile.ScrapeType == models.ScrapeTypeOnly || mediaFile.RenameType != models.RenameTypeMove {
+	if mediaFile.ScrapeType == models.ScrapeTypeOnly || mediaFile.RenameType != models.RenameTypeMove || mediaFile.IsReScrape {
 		// 如果仅刮削，跳过
 		// 如果不是移动模式，跳过
+		// 如果是重新刮削（回退后），跳过删除源路径
 		// 如果不强制删除来源目录，跳过
 		// 如果视频在来源根目录，跳过
 		helpers.AppLogger.Infof("视频 %s 存在不符合删除来源目录的条件，跳过删除来源目录: %s", mediaFile.Name, mediaFile.Path)
@@ -370,7 +371,7 @@ func (t *tvShowScrapeImpl) SyncFilesToSTRMPath(mediaFile *models.ScrapeMediaFile
 	// 1. 构造STRM文件路径
 	syncStrm := syncstrm.NewSyncStrmFromSyncPath(syncPath)
 	path := mediaFile.GetDestFullSeasonPath()
-	syncStrm.ProcessStrmFile(&syncstrm.SyncFileCache{
+	strmErr := syncStrm.ProcessStrmFile(&syncstrm.SyncFileCache{
 		Path:          path,
 		ParentId:      path,
 		FileType:      v115open.TypeFile,
@@ -385,6 +386,22 @@ func (t *tvShowScrapeImpl) SyncFilesToSTRMPath(mediaFile *models.ScrapeMediaFile
 		LocalFilePath: filepath.Join(syncPath.LocalPath, path, mediaFile.NewVideoBaseName+".strm"),
 	})
 	models.DeleteSyncRecordById(syncStrm.Sync.ID)
+	// 发送STRM生成完成通知（复用现有SyncFinished通知开关）
+	seasonEp := fmt.Sprintf("S%02dE%02d", mediaFile.SeasonNumber, mediaFile.EpisodeNumber)
+	if strmErr == nil && mediaFile.Media != nil && notificationmanager.GlobalEnhancedNotificationManager != nil {
+		ctx := context.Background()
+		notif := &models.Notification{
+			Type:      models.SyncFinished,
+			Title:     fmt.Sprintf("✅ STRM生成完成: %s %s", mediaFile.Name, seasonEp),
+			Content:   fmt.Sprintf("📊 类型: 电视剧, 路径: %s\n⏰ 时间: %s", syncPath.RemotePath, time.Now().Format("2006-01-02 15:04:05")),
+			Image:     mediaFile.Media.PosterPath,
+			Timestamp: time.Now(),
+			Priority:  models.NormalPriority,
+		}
+		if err := notificationmanager.GlobalEnhancedNotificationManager.SendNotification(ctx, notif); err != nil {
+			helpers.AppLogger.Errorf("发送STRM生成完成通知失败: %v", err)
+		}
+	}
 	// 将其他文件放入STRM同步目录内
 	if files == nil {
 		return
