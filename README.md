@@ -1,6 +1,7 @@
 # QMediaSync
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/qicfan/qmediasync)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/qicfan/qmediasync)
 
 ## 讨论方式
 
